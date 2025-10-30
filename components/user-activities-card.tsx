@@ -280,23 +280,11 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
 
             <div className="space-y-2">
               <Label>Activity Type</Label>
-              <Select
+              <Input
                 value={formData.activity_type}
-                onValueChange={(value: ActivityType) =>
-                  setFormData({ ...formData, activity_type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {activityTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.replace(/_/g, ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => setFormData({ ...formData, activity_type: e.target.value as ActivityType })}
+                placeholder="Enter activity type"
+              />
             </div>
 
             <div className="space-y-2">
