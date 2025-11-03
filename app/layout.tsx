@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'CRM Admin Panel',
-  description: 'CRM administration panel',
+  description: 'Multi-bank CRM administration panel',
 };
 
 export default function RootLayout({

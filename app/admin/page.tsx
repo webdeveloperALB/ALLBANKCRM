@@ -236,7 +236,7 @@ export default function AdminPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-4xl font-bold mb-2">CRM Admin Panel</h1>
+            <h1 className="text-4xl font-bold mb-2">Multi-Bank CRM Admin Panel</h1>
             <p className="text-gray-600">Manage users across all three banks from one dashboard</p>
           </div>
           <Button variant="outline" onClick={handleLogout}>

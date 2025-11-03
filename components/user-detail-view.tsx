@@ -16,6 +16,7 @@ import { UserExternalAccountsCard } from '@/components/user-external-accounts-ca
 import { UserTransfersCard } from '@/components/user-transfers-card';
 import { UserCryptoBalancesCard } from '@/components/user-crypto-balances-card';
 import { UserCryptoTransactionsCard } from '@/components/user-crypto-transactions-card';
+import { UserCardsManagement } from '@/components/user-cards-management';
 
 interface UserDetailViewProps {
   user: UserWithBank;
@@ -146,6 +147,10 @@ export function UserDetailView({ user, onBack }: UserDetailViewProps) {
 
       <div className="mt-4">
         <UserCryptoTransactionsCard user={user} />
+      </div>
+
+      <div className="mt-4">
+        <UserCardsManagement user={user} />
       </div>
 
       {viewingKYC && (
