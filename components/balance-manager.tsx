@@ -1,12 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DollarSign,
+  Euro,
+  Coins,
+  Bitcoin,
+  Plus,
+  Minus,
+  ArrowRightLeft,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 interface BalanceManagerProps {
   bankKey: string;
@@ -24,33 +40,14 @@ interface Balances {
 
 export function BalanceManager({ bankKey, userId }: BalanceManagerProps) {
   const [balances, setBalances] = useState<Balances>({
-    usd: '0.00',
-    euro: '0.00',
-    cad: '0.00',
-    btc: '0.00000000',
-    eth: '0.00000000',
-    usdt: '0.000000'
+    usd: "0.00",
+    euro: "0.00",
+    cad: "0.00",
+    btc: "0.00000000",
+    eth: "0.00000000",
+    usdt: "0.000000",
   });
 
-  const [editValues, setEditValues] = useState({
-    usd: '',
-    euro: '',
-    cad: '',
-    btc: '',
-    eth: '',
-    usdt: ''
-  });
-
-  const [selectedCurrencies, setSelectedCurrencies] = useState({
-    usd: false,
-    euro: false,
-    cad: false,
-    btc: false,
-    eth: false,
-    usdt: false
-  });
-
-  const [operation, setOperation] = useState<'set' | 'add' | 'deduct'>('set');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -61,91 +58,63 @@ export function BalanceManager({ bankKey, userId }: BalanceManagerProps) {
   async function loadBalances() {
     setLoading(true);
     try {
-      const response = await fetch(`/api/balances?bankKey=${bankKey}&userId=${userId}`);
+      const response = await fetch(
+        `/api/balances?bankKey=${bankKey}&userId=${userId}`
+      );
       if (response.ok) {
         const data = await response.json();
         setBalances({
-          usd: data.usd || '0.00',
-          euro: data.euro || '0.00',
-          cad: data.cad || '0.00',
-          btc: data.btc || '0.00000000',
-          eth: data.eth || '0.00000000',
-          usdt: data.usdt || '0.000000'
+          usd: data.usd || "0.00",
+          euro: data.euro || "0.00",
+          cad: data.cad || "0.00",
+          btc: data.btc || "0.00000000",
+          eth: data.eth || "0.00000000",
+          usdt: data.usdt || "0.000000",
         });
       }
     } catch (error) {
-      console.error('Failed to load balances:', error);
+      console.error("Failed to load balances:", error);
     } finally {
       setLoading(false);
     }
   }
 
-  async function updateBalances() {
+  async function executeOperation(
+    currency: string,
+    amount: string,
+    operation: "set" | "add" | "deduct",
+    isCrypto: boolean
+  ) {
+    if (!amount || parseFloat(amount) === 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: any = { bankKey, userId, operation, balances: {} };
 
-      if (selectedCurrencies.usd && editValues.usd) {
-        payload.balances.usd = editValues.usd;
-      }
-      if (selectedCurrencies.euro && editValues.euro) {
-        payload.balances.euro = editValues.euro;
-      }
-      if (selectedCurrencies.cad && editValues.cad) {
-        payload.balances.cad = editValues.cad;
+      if (isCrypto) {
+        payload.balances.crypto = { [currency]: amount };
+      } else {
+        payload.balances[currency] = amount;
       }
 
-      if (selectedCurrencies.btc || selectedCurrencies.eth || selectedCurrencies.usdt) {
-        const cryptoData: any = {};
-        if (selectedCurrencies.btc && editValues.btc) cryptoData.btc = editValues.btc;
-        if (selectedCurrencies.eth && editValues.eth) cryptoData.eth = editValues.eth;
-        if (selectedCurrencies.usdt && editValues.usdt) cryptoData.usdt = editValues.usdt;
-
-        if (Object.keys(cryptoData).length > 0) {
-          payload.balances.crypto = cryptoData;
-        }
-      }
-
-      if (Object.keys(payload.balances).length === 0) {
-        alert('Select at least one currency and enter a value');
-        setSaving(false);
-        return;
-      }
-
-      console.log('Sending payload:', JSON.stringify(payload, null, 2));
-
-      const response = await fetch('/api/balances/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const response = await fetch("/api/balances/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         await loadBalances();
-        setEditValues({
-          usd: '',
-          euro: '',
-          cad: '',
-          btc: '',
-          eth: '',
-          usdt: ''
-        });
-        setSelectedCurrencies({
-          usd: false,
-          euro: false,
-          cad: false,
-          btc: false,
-          eth: false,
-          usdt: false
-        });
-        alert('Balances updated successfully');
+        alert("Balance updated successfully");
       } else {
         const errorData = await response.json();
-        console.error('Update failed:', errorData);
-        alert(`Failed: ${errorData.error || 'Unknown error'}`);
+        alert(`Failed: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
       alert(`Error: ${error}`);
     } finally {
       setSaving(false);
@@ -153,198 +122,239 @@ export function BalanceManager({ bankKey, userId }: BalanceManagerProps) {
   }
 
   if (loading) {
-    return <Card><CardContent className="p-6">Loading balances...</CardContent></Card>;
+    return (
+      <Card className="border-0 shadow-lg">
+        <CardContent className="p-12 flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <Wallet className="w-12 h-12 mx-auto text-gray-400 animate-pulse" />
+            <div className="text-gray-500 font-medium">Loading balances...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
+  const CurrencyCard = ({
+    currency,
+    label,
+    symbol,
+    icon: Icon,
+    balance,
+    step,
+    isCrypto = false,
+  }: {
+    currency: string;
+    label: string;
+    symbol: string;
+    icon: any;
+    balance: string;
+    step?: string;
+    isCrypto?: boolean;
+  }) => {
+    const [amount, setAmount] = useState("");
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+      <Card className="border border-gray-200 hover:border-gray-300 transition-all duration-200">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gray-100 rounded-xl">
+                <Icon className="w-6 h-6 text-gray-700" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-500 mb-1">
+                  {label}
+                </div>
+                <div className="text-3xl font-bold text-gray-900 font-mono">
+                  {symbol}
+                  {balance}
+                </div>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {isCrypto ? "Crypto" : "Fiat"}
+            </Badge>
+          </div>
+
+          <Separator className="mb-4" />
+
+          <div className="space-y-3">
+            <Input
+              type="number"
+              step={step || "0.01"}
+              placeholder="Enter amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onFocus={() => setIsExpanded(true)}
+              className="h-11 text-base font-medium"
+            />
+
+            {isExpanded && amount && (
+              <div className="grid grid-cols-3 gap-2 animate-in fade-in-50 duration-200">
+                <Button
+                  onClick={() => {
+                    executeOperation(currency, amount, "set", isCrypto);
+                    setAmount("");
+                    setIsExpanded(false);
+                  }}
+                  disabled={saving}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 h-10"
+                >
+                  <ArrowRightLeft className="w-4 h-4" />
+                  Set
+                </Button>
+                <Button
+                  onClick={() => {
+                    executeOperation(currency, amount, "add", isCrypto);
+                    setAmount("");
+                    setIsExpanded(false);
+                  }}
+                  disabled={saving}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 h-10 text-green-700 border-green-200 hover:bg-green-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </Button>
+                <Button
+                  onClick={() => {
+                    executeOperation(currency, amount, "deduct", isCrypto);
+                    setAmount("");
+                    setIsExpanded(false);
+                  }}
+                  disabled={saving}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 h-10 text-red-700 border-red-200 hover:bg-red-50"
+                >
+                  <Minus className="w-4 h-4" />
+                  Deduct
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const currencies = {
+    fiat: [
+      {
+        key: "usd",
+        label: "US Dollar",
+        symbol: "$",
+        icon: DollarSign,
+        balance: balances.usd,
+      },
+      {
+        key: "euro",
+        label: "Euro",
+        symbol: "€",
+        icon: Euro,
+        balance: balances.euro,
+      },
+      {
+        key: "cad",
+        label: "Canadian Dollar",
+        symbol: "$",
+        icon: Coins,
+        balance: balances.cad,
+      },
+    ],
+    crypto: [
+      {
+        key: "btc",
+        label: "Bitcoin",
+        symbol: "₿",
+        icon: Bitcoin,
+        balance: balances.btc,
+        step: "0.00000001",
+      },
+      {
+        key: "eth",
+        label: "Ethereum",
+        symbol: "Ξ",
+        icon: TrendingUp,
+        balance: balances.eth,
+        step: "0.00000001",
+      },
+      {
+        key: "usdt",
+        label: "Tether",
+        symbol: "₮",
+        icon: Coins,
+        balance: balances.usdt,
+        step: "0.000001",
+      },
+    ],
+  };
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-4">
-          <CardTitle className="text-xl">Balance Management</CardTitle>
-          <Select value={operation} onValueChange={(v: any) => setOperation(v)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="set">Set</SelectItem>
-              <SelectItem value="add">Add</SelectItem>
-              <SelectItem value="deduct">Deduct</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-6 gap-3 p-4 bg-slate-50 rounded">
-          <div>
-            <div className="text-xs text-slate-500 mb-1">USD</div>
-            <div className="text-xl font-mono font-semibold">${balances.usd}</div>
+    <div className="space-y-6">
+      <Card className="border-0 shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 text-white p-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Wallet className="w-8 h-8" />
+            <CardTitle className="text-3xl font-bold">
+              Account Balances
+            </CardTitle>
           </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">EUR</div>
-            <div className="text-xl font-mono font-semibold">€{balances.euro}</div>
+          <CardDescription className="text-gray-300 text-base">
+            Manage fiat and cryptocurrency balances for this account
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <div className="space-y-8">
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-bold text-gray-900">Fiat Currencies</h3>
           </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">CAD</div>
-            <div className="text-xl font-mono font-semibold">${balances.cad}</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">BTC</div>
-            <div className="text-base font-mono font-semibold">{balances.btc}</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">ETH</div>
-            <div className="text-base font-mono font-semibold">{balances.eth}</div>
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">USDT</div>
-            <div className="text-base font-mono font-semibold">{balances.usdt}</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currencies.fiat.map((currency) => (
+              <CurrencyCard
+                key={currency.key}
+                currency={currency.key}
+                label={currency.label}
+                symbol={currency.symbol}
+                icon={currency.icon}
+                balance={currency.balance}
+              />
+            ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-          <div className="space-y-2 col-span-1">
-            <div className="flex items-center gap-2 p-2 border rounded text-sm">
-              <Checkbox
-                id="usd"
-                checked={selectedCurrencies.usd}
-                onCheckedChange={(checked) =>
-                  setSelectedCurrencies({ ...selectedCurrencies, usd: !!checked })
-                }
-              />
-              <Label htmlFor="usd" className="flex-1 cursor-pointer text-xs">USD</Label>
-            </div>
-            {selectedCurrencies.usd && (
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="Amount"
-                className="h-9 text-sm"
-                value={editValues.usd}
-                onChange={(e) => setEditValues({ ...editValues, usd: e.target.value })}
-              />
-            )}
-          </div>
+        <Separator />
 
-          <div className="space-y-2 col-span-1">
-            <div className="flex items-center gap-2 p-2 border rounded text-sm">
-              <Checkbox
-                id="euro"
-                checked={selectedCurrencies.euro}
-                onCheckedChange={(checked) =>
-                  setSelectedCurrencies({ ...selectedCurrencies, euro: !!checked })
-                }
-              />
-              <Label htmlFor="euro" className="flex-1 cursor-pointer text-xs">EUR</Label>
-            </div>
-            {selectedCurrencies.euro && (
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="Amount"
-                className="h-9 text-sm"
-                value={editValues.euro}
-                onChange={(e) => setEditValues({ ...editValues, euro: e.target.value })}
-              />
-            )}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Bitcoin className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-bold text-gray-900">
+              Cryptocurrencies
+            </h3>
           </div>
-
-          <div className="space-y-2 col-span-1">
-            <div className="flex items-center gap-2 p-2 border rounded text-sm">
-              <Checkbox
-                id="cad"
-                checked={selectedCurrencies.cad}
-                onCheckedChange={(checked) =>
-                  setSelectedCurrencies({ ...selectedCurrencies, cad: !!checked })
-                }
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currencies.crypto.map((currency) => (
+              <CurrencyCard
+                key={currency.key}
+                currency={currency.key}
+                label={currency.label}
+                symbol={currency.symbol}
+                icon={currency.icon}
+                balance={currency.balance}
+                step={currency.step}
+                isCrypto={true}
               />
-              <Label htmlFor="cad" className="flex-1 cursor-pointer text-xs">CAD</Label>
-            </div>
-            {selectedCurrencies.cad && (
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="Amount"
-                className="h-9 text-sm"
-                value={editValues.cad}
-                onChange={(e) => setEditValues({ ...editValues, cad: e.target.value })}
-              />
-            )}
-          </div>
-
-          <div className="space-y-2 col-span-1">
-            <div className="flex items-center gap-2 p-2 border rounded text-sm">
-              <Checkbox
-                id="btc"
-                checked={selectedCurrencies.btc}
-                onCheckedChange={(checked) =>
-                  setSelectedCurrencies({ ...selectedCurrencies, btc: !!checked })
-                }
-              />
-              <Label htmlFor="btc" className="flex-1 cursor-pointer text-xs">BTC</Label>
-            </div>
-            {selectedCurrencies.btc && (
-              <Input
-                type="number"
-                step="0.00000001"
-                placeholder="Amount"
-                className="h-9 text-sm"
-                value={editValues.btc}
-                onChange={(e) => setEditValues({ ...editValues, btc: e.target.value })}
-              />
-            )}
-          </div>
-
-          <div className="space-y-2 col-span-1">
-            <div className="flex items-center gap-2 p-2 border rounded text-sm">
-              <Checkbox
-                id="eth"
-                checked={selectedCurrencies.eth}
-                onCheckedChange={(checked) =>
-                  setSelectedCurrencies({ ...selectedCurrencies, eth: !!checked })
-                }
-              />
-              <Label htmlFor="eth" className="flex-1 cursor-pointer text-xs">ETH</Label>
-            </div>
-            {selectedCurrencies.eth && (
-              <Input
-                type="number"
-                step="0.00000001"
-                placeholder="Amount"
-                className="h-9 text-sm"
-                value={editValues.eth}
-                onChange={(e) => setEditValues({ ...editValues, eth: e.target.value })}
-              />
-            )}
-          </div>
-
-          <div className="space-y-2 col-span-1">
-            <div className="flex items-center gap-2 p-2 border rounded text-sm">
-              <Checkbox
-                id="usdt"
-                checked={selectedCurrencies.usdt}
-                onCheckedChange={(checked) =>
-                  setSelectedCurrencies({ ...selectedCurrencies, usdt: !!checked })
-                }
-              />
-              <Label htmlFor="usdt" className="flex-1 cursor-pointer text-xs">USDT</Label>
-            </div>
-            {selectedCurrencies.usdt && (
-              <Input
-                type="number"
-                step="0.000001"
-                placeholder="Amount"
-                className="h-9 text-sm"
-                value={editValues.usdt}
-                onChange={(e) => setEditValues({ ...editValues, usdt: e.target.value })}
-              />
-            )}
+            ))}
           </div>
         </div>
-
-        <Button onClick={updateBalances} disabled={saving} className="w-full" size="sm">
-          {saving ? 'Updating...' : 'Update Balances'}
-        </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

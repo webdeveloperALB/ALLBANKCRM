@@ -262,23 +262,23 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader>
+      <Card className="shadow-sm border-0 ring-1 ring-gray-200">
+        <CardHeader className="bg-gradient-to-br from-blue-50 to-violet-50 border-b">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <CreditCard className="w-6 h-6" />
+              <CardTitle className="text-xl font-bold flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-blue-600" />
                 Card Management
               </CardTitle>
-              <CardDescription>Manage user debit and credit cards</CardDescription>
+              <CardDescription>Manage user payment cards and settings</CardDescription>
             </div>
-            <Button onClick={() => setShowAddDialog(true)}>
+            <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4 mr-2" />
-              Add New Card
+              Add Card
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {cards.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
               <CreditCard className="w-12 h-12 mx-auto text-gray-400 mb-2" />
@@ -286,7 +286,7 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
             </div>
           ) : (
             cards.map((card) => (
-              <div key={card.id} className="border rounded-lg p-4 bg-white">
+              <div key={card.id} className="border-2 rounded-xl p-5 bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-all">
                 {editingCardId === card.id ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">

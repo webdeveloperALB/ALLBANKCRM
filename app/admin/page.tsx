@@ -232,58 +232,62 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="w-full py-8 px-6">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Multi-Bank CRM Admin Panel</h1>
-            <p className="text-gray-600">Manage users across all three banks from one dashboard</p>
-          </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-
-        {ipInfo && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+      <div className="bg-white/80 backdrop-blur-md border-b shadow-sm sticky top-0 z-50">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-blue-900 mb-1">Your Connection Details</p>
-              <p className="text-sm text-blue-800">
-                <span className="font-medium">IP Address:</span> {ipInfo.ip}
-                {' • '}
-                <span className="font-medium">Location:</span> {ipInfo.city}, {ipInfo.region}, {ipInfo.country}
-              </p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
+                Banking CRM
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">Multi-Bank Administration Dashboard</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {ipInfo && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-violet-50 rounded-lg border border-blue-100">
+                  <MapPin className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">{ipInfo.city}, {ipInfo.country}</span>
+                </div>
+              )}
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="border-gray-300 hover:bg-gray-50"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-4">
-          <Input
-            placeholder="Search by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="md:w-1/3"
-          />
+      <div className="max-w-[1600px] mx-auto px-6 py-8">
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6 animate-in">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900">Search & Filters</h2>
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <Input
+              placeholder="Search by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="md:w-1/3 h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            />
 
-          <Select value={filterBank} onValueChange={(v) => handleFilterChange('bank', v)}>
-            <SelectTrigger className="md:w-1/4">
-              <SelectValue placeholder="Filter by bank" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Banks</SelectItem>
-              <SelectItem value="cayman">Cayman Bank</SelectItem>
-              <SelectItem value="lithuanian">Lithuanian Bank</SelectItem>
-              <SelectItem value="digitalchain">Digital Chain Bank</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select value={filterBank} onValueChange={(v) => handleFilterChange('bank', v)}>
+              <SelectTrigger className="md:w-1/4 h-11 border-gray-300">
+                <SelectValue placeholder="Filter by bank" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Banks</SelectItem>
+                <SelectItem value="cayman">Cayman Bank</SelectItem>
+                <SelectItem value="lithuanian">Lithuanian Bank</SelectItem>
+                <SelectItem value="digitalchain">Digital Chain Bank</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={filterKYC} onValueChange={(v) => handleFilterChange('kyc', v)}>
-            <SelectTrigger className="md:w-1/4">
-              <SelectValue placeholder="Filter by KYC" />
+            <Select value={filterKYC} onValueChange={(v) => handleFilterChange('kyc', v)}>
+              <SelectTrigger className="md:w-1/4 h-11 border-gray-300">
+                <SelectValue placeholder="Filter by KYC" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
@@ -461,6 +465,7 @@ export default function AdminPage() {
           onClose={() => setViewingKYC(null)}
         />
       )}
+      </div>
     </div>
   );
 }

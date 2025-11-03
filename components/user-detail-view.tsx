@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, FileText, Circle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Bitcoin, Send, Activity, MessageSquare, FileBarChart, Building2 } from 'lucide-react';
 import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
 import { BalanceManager } from '@/components/balance-manager';
 import { UserTaxesCard } from '@/components/user-taxes-card';
@@ -47,110 +48,160 @@ export function UserDetailView({ user, onBack }: UserDetailViewProps) {
   }, [user.id, user.bank_key]);
 
   return (
-    <div className="w-full py-6 px-6">
-      <div className="mb-4">
-        <Button variant="outline" onClick={onBack} size="sm">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Users List
-        </Button>
-      </div>
-
-      <Card className="mb-4">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl">User Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Bank</div>
-              <Badge variant="secondary">{user.bank_name}</Badge>
-            </div>
-
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Email</div>
-              <div className="text-sm font-medium truncate">{user.email}</div>
-            </div>
-
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Password</div>
-              <div className="text-sm font-medium">{user.password || '-'}</div>
-            </div>
-
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Status</div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+      <div className="bg-white/80 backdrop-blur-md border-b shadow-sm sticky top-0 z-50">
+        <div className="max-w-[1800px] mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={onBack} className="hover:bg-gray-100">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Users
+            </Button>
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <Circle
-                  className={`w-3 h-3 ${presence?.is_online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'}`}
+                  className={`w-2 h-2 ${presence?.is_online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'}`}
                 />
                 <span className="text-sm font-medium">
                   {presence?.is_online ? 'Online' : 'Offline'}
                 </span>
               </div>
-              {presence?.country && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {presence.city ? `${presence.city}, ` : ''}{presence.country}
-                </div>
-              )}
+              <Button onClick={() => setViewingKYC(true)} variant="outline" size="sm">
+                <FileText className="w-4 h-4 mr-2" />
+                KYC Documents
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-[1800px] mx-auto px-6 py-8">
+        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6 animate-in">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{user.email}</h1>
+              <p className="text-gray-500 mt-1">User ID: {user.id}</p>
+            </div>
+            <Badge variant="secondary" className="text-sm px-3 py-1">
+              {user.bank_name}
+            </Badge>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Password</div>
+              <div className="text-base font-medium text-gray-900">{user.password || 'Not set'}</div>
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 mb-1">Roles</div>
-              <div className="flex gap-1 flex-wrap">
-                {user.is_admin && <Badge className="text-xs px-2 py-0">Admin</Badge>}
-                {user.is_manager && <Badge variant="outline" className="text-xs px-2 py-0">Manager</Badge>}
-                {user.is_superiormanager && <Badge variant="outline" className="text-xs px-2 py-0">Superior</Badge>}
-                {!user.is_admin && !user.is_manager && !user.is_superiormanager && (
-                  <span className="text-xs text-gray-500">None</span>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Location</div>
+              <div className="text-base font-medium text-gray-900">
+                {presence?.country ? (
+                  <>{presence.city ? `${presence.city}, ` : ''}{presence.country}</>
+                ) : (
+                  'Unknown'
                 )}
               </div>
             </div>
 
-            <div className="flex items-end">
-              <Button
-                onClick={() => setViewingKYC(true)}
-                size="sm"
-                variant="outline"
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Roles</div>
+              <div className="flex gap-2 flex-wrap">
+                {user.is_admin && <Badge className="bg-blue-600">Admin</Badge>}
+                {user.is_manager && <Badge variant="outline">Manager</Badge>}
+                {user.is_superiormanager && <Badge variant="outline">Superior</Badge>}
+                {!user.is_admin && !user.is_manager && !user.is_superiormanager && (
+                  <span className="text-sm text-gray-500">No roles assigned</span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">KYC Status</div>
+              <Badge
+                className={
+                  user.kyc_status === 'approved'
+                    ? 'bg-green-100 text-green-800'
+                    : user.kyc_status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : user.kyc_status === 'rejected'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }
               >
-                <FileText className="w-3 h-3 mr-1" />
-                KYC Docs
-              </Button>
+                {user.kyc_status || 'Not Started'}
+              </Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <BalanceManager bankKey={user.bank_key} userId={user.id} />
+        <Tabs defaultValue="balances" className="w-full">
+          <TabsList className="w-full bg-white border shadow-sm h-12 p-1 mb-6">
+            <TabsTrigger value="balances" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Wallet className="w-4 h-4" />
+              Balances
+            </TabsTrigger>
+            <TabsTrigger value="cards" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <CreditCard className="w-4 h-4" />
+              Cards
+            </TabsTrigger>
+            <TabsTrigger value="crypto" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Bitcoin className="w-4 h-4" />
+              Cryptocurrency
+            </TabsTrigger>
+            <TabsTrigger value="transfers" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Send className="w-4 h-4" />
+              Transfers
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <Activity className="w-4 h-4" />
+              Activity
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <MessageSquare className="w-4 h-4" />
+              Messages
+            </TabsTrigger>
+            <TabsTrigger value="other" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+              <FileBarChart className="w-4 h-4" />
+              Taxes
+            </TabsTrigger>
+          </TabsList>
 
-      <div className="mt-4">
-        <UserTaxesCard user={user} />
-      </div>
+          <TabsContent value="balances" className="space-y-6">
+            <BalanceManager bankKey={user.bank_key} userId={user.id} />
+          </TabsContent>
 
-      <div className="mt-4">
-        <UserMessagesCard user={user} />
-      </div>
+          <TabsContent value="cards" className="space-y-6">
+            <UserCardsManagement user={user} />
+          </TabsContent>
 
-      <div className="mt-4">
-        <UserActivitiesCard user={user} />
-      </div>
+          <TabsContent value="crypto" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <UserCryptoBalancesCard user={user} />
+              <UserCryptoTransactionsCard user={user} />
+            </div>
+          </TabsContent>
 
-      <div className="mt-4">
-        <UserExternalAccountsCard user={user} />
-      </div>
+          <TabsContent value="transfers" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <UserExternalAccountsCard user={user} />
+              <UserTransfersCard user={user} />
+            </div>
+          </TabsContent>
 
-      <div className="mt-4">
-        <UserTransfersCard user={user} />
-      </div>
+          <TabsContent value="activity" className="space-y-6">
+            <UserActivitiesCard user={user} />
+          </TabsContent>
 
-      <div className="mt-4">
-        <UserCryptoBalancesCard user={user} />
-      </div>
+          <TabsContent value="messages" className="space-y-6">
+            <UserMessagesCard user={user} />
+          </TabsContent>
 
-      <div className="mt-4">
-        <UserCryptoTransactionsCard user={user} />
-      </div>
-
-      <div className="mt-4">
-        <UserCardsManagement user={user} />
+          <TabsContent value="other" className="space-y-6">
+            <UserTaxesCard user={user} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {viewingKYC && (

@@ -160,33 +160,47 @@ export function UserCryptoBalancesCard({ user }: UserCryptoBalancesCardProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="pb-3 pt-4">
-        <CardTitle className="text-2xl">Crypto Balances</CardTitle>
-        <CardDescription>Manage user cryptocurrency holdings</CardDescription>
+    <Card className="flex flex-col h-full shadow-sm border-0 ring-1 ring-gray-200">
+      <CardHeader className="pb-4 bg-gradient-to-br from-blue-50 to-violet-50 border-b">
+        <CardTitle className="text-xl font-bold flex items-center gap-2">
+          <Bitcoin className="w-5 h-5 text-orange-500" />
+          Cryptocurrency Balances
+        </CardTitle>
+        <CardDescription>Manage user digital asset holdings</CardDescription>
       </CardHeader>
-      <CardContent className="pb-4 flex-1 flex flex-col">
-        <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded mb-4">
-          <div>
-            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-              <Bitcoin className="w-3 h-3" />
-              BTC Balance
+      <CardContent className="pb-6 pt-6 flex-1 flex flex-col">
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <Bitcoin className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-orange-900 uppercase tracking-wider">Bitcoin</span>
             </div>
-            <div className="text-xl font-mono font-semibold">{balances?.btc_balance || '0.00000000'}</div>
+            <div className="text-2xl font-mono font-bold text-orange-900">{balances?.btc_balance || '0.00000000'}</div>
+            <div className="text-xs text-orange-700 mt-1">BTC</div>
           </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-              <Coins className="w-3 h-3" />
-              ETH Balance
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-purple-500 rounded-lg">
+                <Coins className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-purple-900 uppercase tracking-wider">Ethereum</span>
             </div>
-            <div className="text-xl font-mono font-semibold">{balances?.eth_balance || '0.00000000'}</div>
+            <div className="text-2xl font-mono font-bold text-purple-900">{balances?.eth_balance || '0.00000000'}</div>
+            <div className="text-xs text-purple-700 mt-1">ETH</div>
           </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-              <DollarSign className="w-3 h-3" />
-              USDT Balance
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <DollarSign className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xs font-semibold text-green-900 uppercase tracking-wider">Tether</span>
             </div>
-            <div className="text-xl font-mono font-semibold">{balances?.usdt_balance || '0.000000'}</div>
+            <div className="text-2xl font-mono font-bold text-green-900">{balances?.usdt_balance || '0.000000'}</div>
+            <div className="text-xs text-green-700 mt-1">USDT</div>
           </div>
         </div>
 
