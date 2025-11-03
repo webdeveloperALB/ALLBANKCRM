@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, Plus, Trash2, Mail, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, Mail, AlertCircle, Info, CheckCircle, Pencil, Check, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 interface UserMessage {
@@ -32,6 +32,8 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageData, setEditingMessageData] = useState<Partial<UserMessage>>({});
 
   const [newMessage, setNewMessage] = useState({
     title: '',
@@ -89,6 +91,49 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditMessage = (message: UserMessage) => {
+    setEditingMessageId(message.id);
+    setEditingMessageData({
+      title: message.title,
+      content: message.content,
+      message_type: message.message_type,
+      is_read: message.is_read
+    });
+  };
+
+  const handleSaveMessage = async (messageId: string) => {
+    try {
+      const response = await fetch('/api/messages/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bankKey: user.bank_key,
+          messageId,
+          ...editingMessageData
+        })
+      });
+
+      if (response.ok) {
+        await fetchMessages();
+        setEditingMessageId(null);
+        setEditingMessageData({});
+      } else {
+        const errorData = await response.json();
+        const errorMessage = errorData?.error || 'Unknown error occurred';
+        alert(`Failed to update message: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error updating message:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Network error';
+      alert(`Error updating message: ${errorMessage}`);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingMessageData({});
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -232,32 +277,101 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
             </div>
           ) : (
             <div className="border rounded-lg p-4 bg-white">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  {getMessageIcon(messages[0].message_type)}
-                  <h4 className="font-semibold">{messages[0].title}</h4>
+              {editingMessageId === messages[0].id ? (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="edit-title">Title</Label>
+                    <Input
+                      id="edit-title"
+                      value={editingMessageData.title || ''}
+                      onChange={(e) => setEditingMessageData({ ...editingMessageData, title: e.target.value })}
+                      placeholder="Message title"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-content">Content</Label>
+                    <Textarea
+                      id="edit-content"
+                      value={editingMessageData.content || ''}
+                      onChange={(e) => setEditingMessageData({ ...editingMessageData, content: e.target.value })}
+                      placeholder="Message content"
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-type">Type</Label>
+                    <Select
+                      value={editingMessageData.message_type || 'info'}
+                      onValueChange={(value) => setEditingMessageData({ ...editingMessageData, message_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="info">Info</SelectItem>
+                        <SelectItem value="success">Success</SelectItem>
+                        <SelectItem value="warning">Warning</SelectItem>
+                        <SelectItem value="alert">Alert</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSaveMessage(messages[0].id)}
+                      className="flex-1"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCancelEdit}
+                      className="flex-1"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={getMessageBadge(messages[0].message_type)}>
-                    {messages[0].message_type}
-                  </Badge>
-                  {messages[0].is_read && (
-                    <Badge variant="outline" className="text-xs">Read</Badge>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDeleteMessage(messages[0].id)}
-                    disabled={deleting === messages[0].id}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                </div>
-              </div>
-              <p className="text-sm text-gray-700 mb-2">{messages[0].content}</p>
-              <p className="text-xs text-gray-500">
-                {new Date(messages[0].created_at).toLocaleString()}
-              </p>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {getMessageIcon(messages[0].message_type)}
+                      <h4 className="font-semibold">{messages[0].title}</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={getMessageBadge(messages[0].message_type)}>
+                        {messages[0].message_type}
+                      </Badge>
+                      {messages[0].is_read && (
+                        <Badge variant="outline" className="text-xs">Read</Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditMessage(messages[0])}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteMessage(messages[0].id)}
+                        disabled={deleting === messages[0].id}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-2">{messages[0].content}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(messages[0].created_at).toLocaleString()}
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>

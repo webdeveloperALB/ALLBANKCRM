@@ -15,7 +15,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = getBankClient(bankKey);
 
     const { error } = await supabase
-      .from('transaction_history')
+      .from('TransactionHistory')
       .delete()
       .eq('id', transactionId);
 
