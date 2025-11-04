@@ -1,23 +1,42 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { UserWithBank, UserPresence } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Bitcoin, Send, Activity, MessageSquare, FileBarChart, Building2 } from 'lucide-react';
-import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
-import { BalanceManager } from '@/components/balance-manager';
-import { UserTaxesCard } from '@/components/user-taxes-card';
-import { UserMessagesCard } from '@/components/user-messages-card';
-import { UserActivitiesCard } from '@/components/user-activities-card';
-import { UserExternalAccountsCard } from '@/components/user-external-accounts-card';
-import { UserTransfersCard } from '@/components/user-transfers-card';
-import { UserCryptoBalancesCard } from '@/components/user-crypto-balances-card';
-import { UserCryptoTransactionsCard } from '@/components/user-crypto-transactions-card';
-import { UserCardsManagement } from '@/components/user-cards-management';
+import { useState, useEffect } from "react";
+import { UserWithBank, UserPresence } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowLeft,
+  FileText,
+  Circle,
+  Wallet,
+  CreditCard,
+  Bitcoin,
+  Send,
+  Activity,
+  MessageSquare,
+  FileBarChart,
+  Building2,
+  RefreshCw,
+} from "lucide-react";
+import { KYCDocumentsDialog } from "@/components/kyc-documents-dialog";
+import { BalanceManager } from "@/components/balance-manager";
+import { UserTaxesCard } from "@/components/user-taxes-card";
+import { UserMessagesCard } from "@/components/user-messages-card";
+import { UserActivitiesCard } from "@/components/user-activities-card";
+import { UserExternalAccountsCard } from "@/components/user-external-accounts-card";
+import { UserTransfersCard } from "@/components/user-transfers-card";
+import { UserCryptoBalancesCard } from "@/components/user-crypto-balances-card";
+import { UserCryptoTransactionsCard } from "@/components/user-crypto-transactions-card";
+import { UserCardsManagement } from "@/components/user-cards-management";
 
 interface UserDetailViewProps {
   user: UserWithBank;
@@ -25,20 +44,28 @@ interface UserDetailViewProps {
   onUpdate: () => void;
 }
 
-export function UserDetailView({ user, onBack }: UserDetailViewProps) {
+export function UserDetailView({
+  user,
+  onBack,
+  onUpdate,
+}: UserDetailViewProps) {
   const [viewingKYC, setViewingKYC] = useState(false);
   const [presence, setPresence] = useState<UserPresence | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchPresence = async () => {
       try {
-        const response = await fetch(`/api/presence?user_id=${user.id}&bank_key=${user.bank_key}`);
+        const response = await fetch(
+          `/api/presence?user_id=${user.id}&bank_key=${user.bank_key}`
+        );
         if (response.ok) {
           const data = await response.json();
           setPresence(data);
         }
       } catch (error) {
-        console.error('Error fetching presence:', error);
+        console.error("Error fetching presence:", error);
       }
     };
 
@@ -47,25 +74,60 @@ export function UserDetailView({ user, onBack }: UserDetailViewProps) {
     return () => clearInterval(interval);
   }, [user.id, user.bank_key]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await onUpdate();
+      setRefreshKey((prev) => prev + 1);
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       <div className="bg-white/80 backdrop-blur-md border-b shadow-sm sticky top-0 z-50">
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" onClick={onBack} className="hover:bg-gray-100">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Users
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={onBack}
+                className="hover:bg-gray-100"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Users
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="hover:bg-blue-50"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+            </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <Circle
-                  className={`w-2 h-2 ${presence?.is_online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400'}`}
+                  className={`w-2 h-2 ${
+                    presence?.is_online
+                      ? "fill-green-500 text-green-500"
+                      : "fill-gray-400 text-gray-400"
+                  }`}
                 />
                 <span className="text-sm font-medium">
-                  {presence?.is_online ? 'Online' : 'Offline'}
+                  {presence?.is_online ? "Online" : "Offline"}
                 </span>
               </div>
-              <Button onClick={() => setViewingKYC(true)} variant="outline" size="sm">
+              <Button
+                onClick={() => setViewingKYC(true)}
+                variant="outline"
+                size="sm"
+              >
                 <FileText className="w-4 h-4 mr-2" />
                 KYC Documents
               </Button>
@@ -90,47 +152,66 @@ export function UserDetailView({ user, onBack }: UserDetailViewProps) {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Password</div>
-              <div className="text-base font-medium text-gray-900">{user.password || 'Not set'}</div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Password
+              </div>
+              <div className="text-base font-medium text-gray-900">
+                {user.password || "Not set"}
+              </div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Location</div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Location
+              </div>
               <div className="text-base font-medium text-gray-900">
                 {presence?.country ? (
-                  <>{presence.city ? `${presence.city}, ` : ''}{presence.country}</>
+                  <>
+                    {presence.city ? `${presence.city}, ` : ""}
+                    {presence.country}
+                  </>
                 ) : (
-                  'Unknown'
+                  "Unknown"
                 )}
               </div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Roles</div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Roles
+              </div>
               <div className="flex gap-2 flex-wrap">
                 {user.is_admin && <Badge className="bg-blue-600">Admin</Badge>}
                 {user.is_manager && <Badge variant="outline">Manager</Badge>}
-                {user.is_superiormanager && <Badge variant="outline">Superior</Badge>}
-                {!user.is_admin && !user.is_manager && !user.is_superiormanager && (
-                  <span className="text-sm text-gray-500">No roles assigned</span>
+                {user.is_superiormanager && (
+                  <Badge variant="outline">Superior</Badge>
                 )}
+                {!user.is_admin &&
+                  !user.is_manager &&
+                  !user.is_superiormanager && (
+                    <span className="text-sm text-gray-500">
+                      No roles assigned
+                    </span>
+                  )}
               </div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">KYC Status</div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                KYC Status
+              </div>
               <Badge
                 className={
-                  user.kyc_status === 'approved'
-                    ? 'bg-green-100 text-green-800'
-                    : user.kyc_status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : user.kyc_status === 'rejected'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-gray-100 text-gray-800'
+                  user.kyc_status === "approved"
+                    ? "bg-green-100 text-green-800"
+                    : user.kyc_status === "pending"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : user.kyc_status === "rejected"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-gray-100 text-gray-800"
                 }
               >
-                {user.kyc_status || 'Not Started'}
+                {user.kyc_status || "Not Started"}
               </Badge>
             </div>
           </div>
@@ -138,77 +219,108 @@ export function UserDetailView({ user, onBack }: UserDetailViewProps) {
 
         <Tabs defaultValue="balances" className="w-full">
           <TabsList className="w-full bg-white border shadow-sm h-12 p-1 mb-6">
-            <TabsTrigger value="balances" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="balances"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <Wallet className="w-4 h-4" />
               Balances
             </TabsTrigger>
-            <TabsTrigger value="cards" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="cards"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <CreditCard className="w-4 h-4" />
               Cards
             </TabsTrigger>
-            <TabsTrigger value="crypto" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="crypto"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <Bitcoin className="w-4 h-4" />
               Cryptocurrency
             </TabsTrigger>
-            <TabsTrigger value="transfers" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="transfers"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <Send className="w-4 h-4" />
               Transfers
             </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="activity"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <Activity className="w-4 h-4" />
               Activity
             </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="messages"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <MessageSquare className="w-4 h-4" />
               Messages
             </TabsTrigger>
-            <TabsTrigger value="other" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+            <TabsTrigger
+              value="other"
+              className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
               <FileBarChart className="w-4 h-4" />
               Taxes
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="balances" className="space-y-6">
-            <BalanceManager bankKey={user.bank_key} userId={user.id} />
+            <BalanceManager
+              key={`balance-${refreshKey}`}
+              bankKey={user.bank_key}
+              userId={user.id}
+            />
           </TabsContent>
 
           <TabsContent value="cards" className="space-y-6">
-            <UserCardsManagement user={user} />
+            <UserCardsManagement key={`cards-${refreshKey}`} user={user} />
           </TabsContent>
 
           <TabsContent value="crypto" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <UserCryptoBalancesCard user={user} />
-              <UserCryptoTransactionsCard user={user} />
+              <UserCryptoBalancesCard
+                key={`crypto-balances-${refreshKey}`}
+                user={user}
+              />
+              <UserCryptoTransactionsCard
+                key={`crypto-transactions-${refreshKey}`}
+                user={user}
+              />
             </div>
           </TabsContent>
 
           <TabsContent value="transfers" className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <UserExternalAccountsCard user={user} />
-              <UserTransfersCard user={user} />
+              <UserExternalAccountsCard
+                key={`external-accounts-${refreshKey}`}
+                user={user}
+              />
+              <UserTransfersCard key={`transfers-${refreshKey}`} user={user} />
             </div>
           </TabsContent>
 
           <TabsContent value="activity" className="space-y-6">
-            <UserActivitiesCard user={user} />
+            <UserActivitiesCard key={`activities-${refreshKey}`} user={user} />
           </TabsContent>
 
           <TabsContent value="messages" className="space-y-6">
-            <UserMessagesCard user={user} />
+            <UserMessagesCard key={`messages-${refreshKey}`} user={user} />
           </TabsContent>
 
           <TabsContent value="other" className="space-y-6">
-            <UserTaxesCard user={user} />
+            <UserTaxesCard key={`taxes-${refreshKey}`} user={user} />
           </TabsContent>
         </Tabs>
       </div>
 
       {viewingKYC && (
-        <KYCDocumentsDialog
-          user={user}
-          onClose={() => setViewingKYC(false)}
-        />
+        <KYCDocumentsDialog user={user} onClose={() => setViewingKYC(false)} />
       )}
     </div>
   );
