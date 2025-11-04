@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, Plus, Trash2, Mail, AlertCircle, Info, CheckCircle, Pencil, Check, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface UserMessage {
   id: string;
@@ -34,6 +36,9 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingMessageData, setEditingMessageData] = useState<Partial<UserMessage>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; messageId: string | null }>({ open: false, messageId: null });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [newMessage, setNewMessage] = useState({
     title: '',
@@ -62,7 +67,8 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
 
   const handleAddMessage = async () => {
     if (!newMessage.title || !newMessage.content) {
-      alert('Please fill in both title and content');
+      setError('Please fill in both title and content');
+      setTimeout(() => setError(''), 3000);
       return;
     }
 
@@ -83,11 +89,13 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
         await fetchMessages();
       } else {
         const errorData = await response.json();
-        alert(`Failed to create message: ${errorData.error}`);
+        setError(`Failed to create message: ${errorData.error}`);
+        setTimeout(() => setError(''), 3000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating message:', error);
-      alert('Error creating message: ' + error);
+      setError('Error creating message: ' + error.message);
+      setTimeout(() => setError(''), 3000);
     } finally {
       setSaving(false);
     }
@@ -122,12 +130,14 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
       } else {
         const errorData = await response.json();
         const errorMessage = errorData?.error || 'Unknown error occurred';
-        alert(`Failed to update message: ${errorMessage}`);
+        setError(`Failed to update message: ${errorMessage}`);
+        setTimeout(() => setError(''), 3000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating message:', error);
       const errorMessage = error instanceof Error ? error.message : 'Network error';
-      alert(`Error updating message: ${errorMessage}`);
+      setError(`Error updating message: ${errorMessage}`);
+      setTimeout(() => setError(''), 3000);
     }
   };
 
@@ -136,29 +146,33 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
     setEditingMessageData({});
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
+  const handleDeleteMessage = async () => {
+    if (!deleteConfirm.messageId) return;
 
-    setDeleting(messageId);
+    setDeleting(deleteConfirm.messageId);
     try {
       const response = await fetch('/api/messages/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bankKey: user.bank_key,
-          messageId
+          messageId: deleteConfirm.messageId
         })
       });
 
       if (response.ok) {
         await fetchMessages();
+        setSuccess('Message deleted successfully');
+        setTimeout(() => setSuccess(''), 3000);
       } else {
         const errorData = await response.json();
-        alert(`Failed to delete message: ${errorData.error}`);
+        setError(`Failed to delete message: ${errorData.error}`);
+        setTimeout(() => setError(''), 3000);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting message:', error);
-      alert('Error deleting message: ' + error);
+      setError('Error deleting message: ' + error.message);
+      setTimeout(() => setError(''), 3000);
     } finally {
       setDeleting(null);
     }
@@ -203,6 +217,7 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>User Messages</CardTitle>
@@ -359,7 +374,7 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleDeleteMessage(messages[0].id)}
+                        onClick={() => setDeleteConfirm({ open: true, messageId: messages[0].id })}
                         disabled={deleting === messages[0].id}
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
@@ -376,6 +391,35 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
           )}
         </div>
       </CardContent>
+
+      {error && (
+        <div className="absolute top-4 right-4 max-w-md">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {success && (
+        <div className="absolute top-4 right-4 max-w-md">
+          <Alert className="border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">{success}</AlertDescription>
+          </Alert>
+        </div>
+      )}
     </Card>
+
+    <ConfirmDialog
+      open={deleteConfirm.open}
+      onOpenChange={(open) => setDeleteConfirm({ open, messageId: null })}
+      title="Delete Message"
+      description="Are you sure you want to delete this message? This action cannot be undone."
+      onConfirm={handleDeleteMessage}
+      confirmText="Delete"
+      variant="destructive"
+    />
+    </>
   );
 }

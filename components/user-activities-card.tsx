@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Edit, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface UserActivitiesCardProps {
   user: UserWithBank;
@@ -49,6 +50,7 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; activityId: string | null }>({ open: false, activityId: null });
 
   const fetchActivities = async () => {
     try {
@@ -148,8 +150,8 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
     }
   };
 
-  const handleDelete = async (activityId: string) => {
-    if (!confirm('Are you sure you want to delete this activity?')) return;
+  const handleDelete = async () => {
+    if (!deleteConfirm.activityId) return;
 
     try {
       const response = await fetch('/api/activities/delete', {
@@ -157,18 +159,20 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bank_key: user.bank_key,
-          activity_id: activityId,
+          activity_id: deleteConfirm.activityId,
         }),
       });
 
       if (response.ok) {
         await fetchActivities();
+        setSuccess('Activity deleted successfully');
+        setTimeout(() => setSuccess(''), 3000);
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to delete activity');
+        setError(data.error || 'Failed to delete activity');
       }
     } catch (error: any) {
-      alert(error.message);
+      setError(error.message);
     }
   };
 
@@ -242,7 +246,7 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleDelete(activity.id)}
+                        onClick={() => setDeleteConfirm({ open: true, activityId: activity.id })}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -379,6 +383,16 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, activityId: null })}
+        title="Delete Activity"
+        description="Are you sure you want to delete this activity? This action cannot be undone."
+        onConfirm={handleDelete}
+        confirmText="Delete"
+        variant="destructive"
+      />
     </>
   );
 }

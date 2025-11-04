@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 interface UserEditDialogProps {
   user: UserWithBank;
@@ -74,11 +75,11 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
       if (response.ok) {
         onSuccess();
       } else {
-        alert('Failed to update user');
+        toast.error('Failed to update user');
       }
     } catch (error) {
       console.error('Error updating user:', error);
-      alert('Error updating user');
+      toast.error('Error updating user');
     } finally {
       setSaving(false);
     }

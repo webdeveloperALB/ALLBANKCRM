@@ -39,8 +39,58 @@ Deno.serve(async (req: Request) => {
     const bankFilter = url.searchParams.get('bank') || 'all';
     const kycFilter = url.searchParams.get('kyc') || 'all';
     const search = url.searchParams.get('search') || '';
+    const userId = url.searchParams.get('user_id') || '';
+    const userBankKey = url.searchParams.get('user_bank_key') || '';
+    const isAdmin = url.searchParams.get('is_admin') === 'true';
+    const isManager = url.searchParams.get('is_manager') === 'true';
+    const isSuperiorManager = url.searchParams.get('is_superiormanager') === 'true';
 
     const allUsers: any[] = [];
+    let accessibleUserIds: string[] = [];
+    let shouldApplyHierarchy = false;
+
+    // If user is a manager or superior manager, check if they have assigned users
+    if ((isManager || isSuperiorManager) && userId && userBankKey) {
+      const userBankConfig = BANKS[userBankKey];
+      if (userBankConfig) {
+        const userClient = createClient(userBankConfig.url, userBankConfig.serviceRoleKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        });
+
+        try {
+          console.log(`Checking hierarchy for user_id: ${userId} in bank: ${userBankKey}`);
+          const { data: accessibleData, error: hierarchyError } = await userClient
+            .rpc('get_accessible_users', { p_user_id: userId });
+
+          if (hierarchyError) {
+            console.error('Error in get_accessible_users RPC:', hierarchyError);
+            console.error('Full error details:', JSON.stringify(hierarchyError));
+            // If function doesn't exist or error, treat as no assigned users (show all)
+            console.log('No hierarchy function available, showing all users (admin mode)');
+            shouldApplyHierarchy = false;
+          } else if (accessibleData && accessibleData.length > 0) {
+            // Manager HAS assigned users - apply hierarchy filtering
+            accessibleUserIds = accessibleData.map((item: any) => item.accessible_user_id);
+            shouldApplyHierarchy = true;
+            console.log('Manager has assigned users:', accessibleUserIds);
+            console.log('Applying hierarchy filtering');
+          } else {
+            // Manager has NO assigned users - show all (admin privileges)
+            console.log('Manager has no assigned users, showing all users (admin mode)');
+            shouldApplyHierarchy = false;
+          }
+        } catch (err) {
+          console.error('Exception calling get_accessible_users:', err);
+          // On error, default to showing all users (admin mode)
+          console.log('Error checking hierarchy, defaulting to admin mode (show all)');
+          shouldApplyHierarchy = false;
+        }
+      }
+    }
+
     const perBankLimit = Math.ceil(perPage / 3);
 
     for (const [key, config] of Object.entries(BANKS)) {
@@ -58,6 +108,19 @@ Deno.serve(async (req: Request) => {
       let query = client
         .from('users')
         .select('*', { count: 'exact' });
+
+      // Apply hierarchy filter for managers/superior managers
+      if (shouldApplyHierarchy) {
+        if (key === userBankKey && accessibleUserIds.length > 0) {
+          // Only show accessible users in their bank
+          console.log(`Filtering users in ${key} to accessible IDs:`, accessibleUserIds);
+          query = query.in('id', accessibleUserIds);
+        } else {
+          // Skip other banks entirely for managers
+          console.log(`Skipping bank ${key} for manager/superior manager`);
+          continue;
+        }
+      }
 
       if (kycFilter !== 'all') {
         query = query.eq('kyc_status', kycFilter);

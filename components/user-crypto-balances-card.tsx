@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Bitcoin, DollarSign, Coins, Save, Plus, Minus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
 interface CryptoBalances {
   id: string;
@@ -82,14 +83,14 @@ export function UserCryptoBalancesCard({ user }: UserCryptoBalancesCardProps) {
 
       if (response.ok) {
         await fetchBalances();
-        alert('Crypto balances updated successfully');
+        toast.success('Crypto balances updated successfully');
       } else {
         const errorData = await response.json();
-        alert(`Failed to update crypto balances: ${errorData.error}`);
+        toast.error(`Failed to update crypto balances: ${errorData.error}`);
       }
     } catch (error) {
       console.error('Error updating crypto balances:', error);
-      alert('Error updating crypto balances: ' + error);
+      toast.error('Error updating crypto balances: ' + error);
     } finally {
       setSaving(false);
     }
@@ -131,14 +132,14 @@ export function UserCryptoBalancesCard({ user }: UserCryptoBalancesCardProps) {
           eth_adjust: '',
           usdt_adjust: ''
         });
-        alert(`Balances ${operation === 'add' ? 'increased' : 'decreased'} successfully`);
+        toast.success(`Balances ${operation === 'add' ? 'increased' : 'decreased'} successfully`);
       } else {
         const errorData = await response.json();
-        alert(`Failed to adjust balances: ${errorData.error}`);
+        toast.error(`Failed to adjust balances: ${errorData.error}`);
       }
     } catch (error) {
       console.error('Error adjusting balances:', error);
-      alert('Error adjusting balances: ' + error);
+      toast.error('Error adjusting balances: ' + error);
     } finally {
       setSaving(false);
     }
@@ -197,7 +198,7 @@ export function UserCryptoBalancesCard({ user }: UserCryptoBalancesCardProps) {
               <div className="p-2 bg-green-500 rounded-lg">
                 <DollarSign className="w-4 h-4 text-white" />
               </div>
-              <span className="text-xs font-semibold text-green-900 uppercase tracking-wider">Tether</span>
+              <span className="text-xs font-semibold text-green-900 uppercase tracking-wider">USDT</span>
             </div>
             <div className="text-2xl font-mono font-bold text-green-900">{balances?.usdt_balance || '0.000000'}</div>
             <div className="text-xs text-green-700 mt-1">USDT</div>

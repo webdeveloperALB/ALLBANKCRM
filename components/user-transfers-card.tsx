@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, ArrowLeftRight, Trash2, Edit2, Clock, CheckCircle, XCircle, AlertCircle, Building2, Loader2, Receipt } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 
@@ -759,32 +760,15 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Transfer</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this transfer? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteTransfer} disabled={submitting}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Transfer"
+        description="Are you sure you want to delete this transfer? This action cannot be undone and will remove all transfer data."
+        onConfirm={handleDeleteTransfer}
+        confirmText="Delete Transfer"
+        variant="destructive"
+      />
 
       <Dialog open={isBankDetailsDialogOpen} onOpenChange={setIsBankDetailsDialogOpen}>
         <DialogContent className="max-w-2xl">

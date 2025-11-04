@@ -29,12 +29,12 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const success = login(username, password);
+    const result = await login(username, password);
 
-    if (success) {
+    if (result.success) {
       router.push('/admin');
     } else {
-      setError('Invalid username or password');
+      setError(result.error || 'Invalid email or password');
       setLoading(false);
     }
   };

@@ -22,10 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Clock, FileText, Pencil, ChevronLeft, ChevronRight, Eye, LogOut, MapPin } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, FileText, Pencil, ChevronLeft, ChevronRight, Eye, LogOut, MapPin, Network, Users as UsersIcon } from 'lucide-react';
 import { UserEditDialog } from '@/components/user-edit-dialog';
 import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
 import { UserDetailView } from '@/components/user-detail-view';
+import { HierarchyManagement } from '@/components/hierarchy-management';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface PaginationInfo {
   page: number;
@@ -36,7 +38,7 @@ interface PaginationInfo {
 
 export default function AdminPage() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const [users, setUsers] = useState<UserWithBank[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterBank, setFilterBank] = useState<string>('all');
@@ -106,6 +108,17 @@ export default function AdminPage() {
         search: debouncedSearch
       });
 
+      // Add user info for hierarchy filtering
+      if (user) {
+        console.log('Current user for hierarchy filtering:', user);
+        params.append('user_id', user.id);
+        params.append('user_bank_key', user.bank_key || '');
+        params.append('is_admin', user.is_admin.toString());
+        params.append('is_manager', user.is_manager.toString());
+        params.append('is_superiormanager', user.is_superiormanager.toString());
+      }
+
+      console.log('Fetching users with params:', params.toString());
       const response = await fetch(`/api/users?${params}`);
       const data = await response.json();
       setUsers(data.users || []);
@@ -263,6 +276,21 @@ export default function AdminPage() {
       </div>
 
       <div className="max-w-[1600px] mx-auto px-6 py-8">
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className={`grid w-full max-w-md h-12 ${user?.is_manager || user?.is_superiormanager ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <UsersIcon className="w-4 h-4" />
+              User Management
+            </TabsTrigger>
+            {!user?.is_manager && !user?.is_superiormanager && (
+              <TabsTrigger value="hierarchy" className="flex items-center gap-2">
+                <Network className="w-4 h-4" />
+                Hierarchy
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="users" className="space-y-6">
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6 animate-in">
           <h2 className="text-lg font-semibold mb-4 text-gray-900">Search & Filters</h2>
           <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -465,6 +493,15 @@ export default function AdminPage() {
           onClose={() => setViewingKYC(null)}
         />
       )}
+      </TabsContent>
+
+      {!user?.is_manager && !user?.is_superiormanager && (
+        <TabsContent value="hierarchy">
+          <HierarchyManagement />
+        </TabsContent>
+      )}
+
+      </Tabs>
       </div>
     </div>
   );

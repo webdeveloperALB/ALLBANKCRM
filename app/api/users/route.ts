@@ -10,11 +10,16 @@ export async function GET(request: NextRequest) {
     const bankFilter = searchParams.get('bank') || 'all';
     const kycFilter = searchParams.get('kyc') || 'all';
     const search = searchParams.get('search') || '';
+    const userId = searchParams.get('user_id') || '';
+    const bankKey = searchParams.get('user_bank_key') || '';
+    const isAdmin = searchParams.get('is_admin') || 'false';
+    const isManager = searchParams.get('is_manager') || 'false';
+    const isSuperiorManager = searchParams.get('is_superiormanager') || 'false';
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/multi-bank-users?page=${page}&perPage=${perPage}&bank=${bankFilter}&kyc=${kycFilter}&search=${encodeURIComponent(search)}`;
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/multi-bank-users?page=${page}&perPage=${perPage}&bank=${bankFilter}&kyc=${kycFilter}&search=${encodeURIComponent(search)}&user_id=${userId}&user_bank_key=${bankKey}&is_admin=${isAdmin}&is_manager=${isManager}&is_superiormanager=${isSuperiorManager}`;
 
     const response = await fetch(edgeFunctionUrl, {
       headers: {

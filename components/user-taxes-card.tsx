@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, Save, Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
 
 interface UserTaxes {
   id: string;
@@ -44,6 +46,7 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
   const [addingTransaction, setAddingTransaction] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<number | null>(null);
   const [editingTransactionData, setEditingTransactionData] = useState<Partial<TransactionHistory>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; transactionId: number | null }>({ open: false, transactionId: null });
 
   const [editData, setEditData] = useState({
     taxes: '0.00',
@@ -122,11 +125,11 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         await fetchTaxes();
       } else {
         const errorData = await response.json();
-        alert(`Failed to update taxes: ${errorData.error}`);
+        toast.error(`Failed to update taxes: ${errorData.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating taxes:', error);
-      alert('Error updating taxes: ' + error);
+      toast.error('Error updating taxes: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -134,7 +137,7 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
 
   const handleAddTransaction = async () => {
     if (!newTransaction.thDetails || !newTransaction.thPoi) {
-      alert('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -162,11 +165,11 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         });
       } else {
         const errorData = await response.json();
-        alert(`Failed to add transaction: ${errorData.error}`);
+        toast.error(`Failed to add transaction: ${errorData.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding transaction:', error);
-      alert('Error adding transaction: ' + error);
+      toast.error('Error adding transaction: ' + error.message);
     } finally {
       setAddingTransaction(false);
     }
@@ -206,12 +209,12 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         const errorData = await response.json();
         const errorMessage = errorData?.error || 'Unknown error occurred';
         console.error('Update failed:', errorData);
-        alert(`Failed to update transaction: ${errorMessage}`);
+        toast.error(`Failed to update transaction: ${errorMessage}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating transaction:', error);
       const errorMessage = error instanceof Error ? error.message : 'Network error';
-      alert(`Error updating transaction: ${errorMessage}`);
+      toast.error(`Error updating transaction: ${errorMessage}`);
     }
   };
 
@@ -220,10 +223,8 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
     setEditingTransactionData({});
   };
 
-  const handleDeleteTransaction = async (transactionId: number) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) {
-      return;
-    }
+  const handleDeleteTransaction = async () => {
+    if (!deleteConfirm.transactionId) return;
 
     try {
       const response = await fetch('/api/transaction-history/delete', {
@@ -231,19 +232,20 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bankKey: user.bank_key,
-          transactionId
+          transactionId: deleteConfirm.transactionId
         })
       });
 
       if (response.ok) {
         await fetchTransactionHistory();
+        toast.success('Transaction deleted successfully');
       } else {
         const errorData = await response.json();
-        alert(`Failed to delete transaction: ${errorData.error}`);
+        toast.error(`Failed to delete transaction: ${errorData.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting transaction:', error);
-      alert('Error deleting transaction: ' + error);
+      toast.error('Error deleting transaction: ' + error.message);
     }
   };
 
@@ -263,6 +265,7 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
   }
 
   return (
+    <>
     <Card className="flex flex-col h-full">
       <CardHeader className="pb-3 pt-4">
         <CardTitle className="text-2xl">Tax Information</CardTitle>
@@ -539,7 +542,7 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDeleteTransaction(transaction.id)}
+                                onClick={() => setDeleteConfirm({ open: true, transactionId: transaction.id })}
                                 className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -557,5 +560,16 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         </div>
       </CardContent>
     </Card>
+
+    <ConfirmDialog
+      open={deleteConfirm.open}
+      onOpenChange={(open) => setDeleteConfirm({ open, transactionId: null })}
+      title="Delete Transaction"
+      description="Are you sure you want to delete this transaction? This action cannot be undone."
+      onConfirm={handleDeleteTransaction}
+      confirmText="Delete"
+      variant="destructive"
+    />
+    </>
   );
 }

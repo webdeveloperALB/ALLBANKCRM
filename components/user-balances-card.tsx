@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { DollarSign, Euro, Coins, Bitcoin, Save, Plus, Minus, Edit } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -109,11 +110,11 @@ export function UserBalancesCard({ user }: UserBalancesCardProps) {
         const errorMsg = errorData.code
           ? `${errorData.error}\nCode: ${errorData.code}\nHint: ${errorData.hint || 'N/A'}`
           : errorData.error;
-        alert(`Failed to update balances:\n${errorMsg}`);
+        toast.error(`Failed to update balances: ${errorMsg}`);
       }
     } catch (error) {
       console.error('Error updating balances:', error);
-      alert('Error updating balances: ' + error);
+      toast.error('Error updating balances: ' + error);
     } finally {
       setSaving(false);
     }

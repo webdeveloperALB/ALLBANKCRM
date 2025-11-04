@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, CreditCard as Edit, CircleAlert as AlertCircle, CircleCheck as CheckCircle, Loader as Loader2, Building2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
 
 interface UserExternalAccountsCardProps {
   user: UserWithBank;
@@ -37,6 +39,7 @@ export function UserExternalAccountsCard({ user }: UserExternalAccountsCardProps
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; accountId: string | null }>({ open: false, accountId: null });
 
   const fetchAccounts = async () => {
     try {
@@ -138,8 +141,8 @@ export function UserExternalAccountsCard({ user }: UserExternalAccountsCardProps
     }
   };
 
-  const handleDelete = async (accountId: string) => {
-    if (!confirm('Are you sure you want to delete this external account?')) return;
+  const handleDelete = async () => {
+    if (!deleteConfirm.accountId) return;
 
     try {
       const response = await fetch('/api/external-accounts/delete', {
@@ -147,18 +150,19 @@ export function UserExternalAccountsCard({ user }: UserExternalAccountsCardProps
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bank_key: user.bank_key,
-          account_id: accountId,
+          account_id: deleteConfirm.accountId,
         }),
       });
 
       if (response.ok) {
         await fetchAccounts();
+        toast.success('External account deleted successfully');
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to delete external account');
+        toast.error(data.error || 'Failed to delete external account');
       }
     } catch (error: any) {
-      alert(error.message);
+      toast.error(error.message);
     }
   };
 
@@ -237,7 +241,7 @@ export function UserExternalAccountsCard({ user }: UserExternalAccountsCardProps
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleDelete(account.id)}
+                        onClick={() => setDeleteConfirm({ open: true, accountId: account.id })}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -378,6 +382,16 @@ export function UserExternalAccountsCard({ user }: UserExternalAccountsCardProps
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, accountId: null })}
+        title="Delete External Account"
+        description="Are you sure you want to delete this external account? This action cannot be undone."
+        onConfirm={handleDelete}
+        confirmText="Delete"
+        variant="destructive"
+      />
     </>
   );
 }

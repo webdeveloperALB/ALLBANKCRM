@@ -28,25 +28,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: bankKey or userId' }, { status: 400 });
     }
 
+    if (!amount || amount === '' || amount === null) {
+      return NextResponse.json({ error: 'Amount is required' }, { status: 400 });
+    }
+
     const supabase = getBankClient(bankKey);
 
     const insertData: any = {
       user_id: userId,
-      transaction_type: transaction_type || 'deposit',
-      amount: amount || 0,
+      transaction_type: transaction_type || 'Transfer',
+      amount: parseFloat(amount) || 0,
       currency: currency || 'USD',
       crypto_type: crypto_type || 'BTC',
-      description: description || '',
+      description: description || null,
       status: status || 'Pending'
     };
 
-    if (price_per_unit !== undefined) insertData.price_per_unit = price_per_unit;
-    if (total_value !== undefined) insertData.total_value = total_value;
-    if (wallet_address !== undefined) insertData.wallet_address = wallet_address;
-    if (network !== undefined) insertData.network = network;
-    if (transaction_hash !== undefined) insertData.transaction_hash = transaction_hash;
-    if (gas_fee !== undefined) insertData.gas_fee = gas_fee;
-    if (admin_notes !== undefined) insertData.admin_notes = admin_notes;
+    if (price_per_unit && price_per_unit !== '' && price_per_unit !== null) {
+      const parsed = parseFloat(price_per_unit);
+      if (!isNaN(parsed)) insertData.price_per_unit = parsed;
+    }
+
+    // Handle gas_fee first
+    if (gas_fee !== undefined && gas_fee !== '' && gas_fee !== null) {
+      const parsed = parseFloat(gas_fee);
+      if (!isNaN(parsed)) insertData.gas_fee = parsed;
+    } else {
+      insertData.gas_fee = 0;
+    }
+
+    // Calculate total_value: if provided use it, otherwise calculate from amount + gas_fee
+    if (total_value && total_value !== '' && total_value !== null) {
+      const parsed = parseFloat(total_value);
+      if (!isNaN(parsed)) insertData.total_value = parsed;
+    } else {
+      // Auto-calculate total_value from amount + gas_fee
+      insertData.total_value = insertData.amount + (insertData.gas_fee || 0);
+    }
+
+    if (wallet_address && wallet_address !== '') {
+      insertData.wallet_address = wallet_address;
+    }
+
+    if (network && network !== '') {
+      insertData.network = network;
+    }
+
+    if (transaction_hash && transaction_hash !== '') {
+      insertData.transaction_hash = transaction_hash;
+    }
+
+    if (admin_notes && admin_notes !== '') {
+      insertData.admin_notes = admin_notes;
+    }
+
+    console.log('Insert data:', JSON.stringify(insertData, null, 2));
 
     const { data, error } = await supabase
       .from('crypto_transactions')

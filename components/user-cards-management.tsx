@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CreditCard, Plus, Pencil, Trash2, X, Check, Eye, EyeOff } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
 
 interface CardData {
   id: string;
@@ -59,6 +61,7 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; cardId: string | null }>({ open: false, cardId: null });
 
   const [newCard, setNewCard] = useState({
     card_number: '',
@@ -150,11 +153,11 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
         await fetchCards();
       } else {
         const errorData = await response.json();
-        alert(`Failed to create card: ${errorData.error}`);
+        toast.error(`Failed to create card: ${errorData.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating card:', error);
-      alert('Error creating card: ' + error);
+      toast.error('Error creating card: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -183,11 +186,11 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
         setEditData({});
       } else {
         const errorData = await response.json();
-        alert(`Failed to update card: ${errorData?.error || 'Unknown error'}`);
+        toast.error(`Failed to update card: ${errorData?.error || 'Unknown error'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating card:', error);
-      alert(`Error updating card: ${error instanceof Error ? error.message : 'Network error'}`);
+      toast.error(`Error updating card: ${error instanceof Error ? error.message : 'Network error'}`);
     }
   };
 
@@ -196,10 +199,8 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
     setEditData({});
   };
 
-  const handleDeleteCard = async (cardId: string) => {
-    if (!confirm('Are you sure you want to delete this card?')) {
-      return;
-    }
+  const handleDeleteCard = async () => {
+    if (!deleteConfirm.cardId) return;
 
     try {
       const response = await fetch('/api/cards/delete', {
@@ -207,19 +208,20 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bankKey: user.bank_key,
-          cardId
+          cardId: deleteConfirm.cardId
         })
       });
 
       if (response.ok) {
         await fetchCards();
+        toast.success('Card deleted successfully');
       } else {
         const errorData = await response.json();
-        alert(`Failed to delete card: ${errorData.error}`);
+        toast.error(`Failed to delete card: ${errorData.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting card:', error);
-      alert('Error deleting card: ' + error);
+      toast.error('Error deleting card: ' + error.message);
     }
   };
 
@@ -502,7 +504,7 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
                         <Button size="sm" variant="ghost" onClick={() => handleEditCard(card)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDeleteCard(card.id)}>
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ open: true, cardId: card.id })}>
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
                       </div>
@@ -769,6 +771,16 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        onOpenChange={(open) => setDeleteConfirm({ open, cardId: null })}
+        title="Delete Card"
+        description="Are you sure you want to delete this card? This action cannot be undone and will remove all card data."
+        onConfirm={handleDeleteCard}
+        confirmText="Delete Card"
+        variant="destructive"
+      />
     </>
   );
 }

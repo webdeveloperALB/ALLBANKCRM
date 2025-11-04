@@ -23,6 +23,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { toast } from 'sonner';
 
 interface BalanceManagerProps {
   bankKey: string;
@@ -86,7 +87,7 @@ export function BalanceManager({ bankKey, userId }: BalanceManagerProps) {
     isCrypto: boolean
   ) {
     if (!amount || parseFloat(amount) === 0) {
-      alert("Please enter a valid amount");
+      toast.error("Please enter a valid amount");
       return;
     }
 
@@ -108,14 +109,14 @@ export function BalanceManager({ bankKey, userId }: BalanceManagerProps) {
 
       if (response.ok) {
         await loadBalances();
-        alert("Balance updated successfully");
+        toast.success("Balance updated successfully");
       } else {
         const errorData = await response.json();
-        alert(`Failed: ${errorData.error || "Unknown error"}`);
+        toast.error(`Failed: ${errorData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert(`Error: ${error}`);
+      toast.error(`Error: ${error}`);
     } finally {
       setSaving(false);
     }
@@ -296,20 +297,6 @@ export function BalanceManager({ bankKey, userId }: BalanceManagerProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 text-white p-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Wallet className="w-8 h-8" />
-            <CardTitle className="text-3xl font-bold">
-              Account Balances
-            </CardTitle>
-          </div>
-          <CardDescription className="text-gray-300 text-base">
-            Manage fiat and cryptocurrency balances for this account
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
       <div className="space-y-8">
         <div>
           <div className="flex items-center gap-2 mb-4">
