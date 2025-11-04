@@ -69,15 +69,49 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    // Extract auth-related updates (email, password)
+    const { email, password, ...otherUpdates } = updates;
+
+    // Step 1: Update auth.users if email or password changed
+    if (email || password) {
+      const authUpdates: any = {};
+      if (email) authUpdates.email = email;
+      if (password) authUpdates.password = password;
+
+      const { error: authError } = await client.auth.admin.updateUserById(
+        userId,
+        authUpdates
+      );
+
+      if (authError) {
+        console.error(`Error updating auth.users in ${config.name}:`, authError);
+        return new Response(
+          JSON.stringify({ error: `Auth update failed: ${authError.message}` }),
+          {
+            status: 500,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
+    }
+
+    // Step 2: Update public.users table
+    const usersUpdates = { ...otherUpdates };
+    if (email) usersUpdates.email = email;
+    if (password) usersUpdates.password = password;
+
     const { data, error } = await client
       .from('users')
-      .update(updates)
+      .update(usersUpdates)
       .eq('id', userId)
       .select()
       .single();
 
     if (error) {
-      console.error(`Error updating user in ${config.name}:`, error);
+      console.error(`Error updating public.users in ${config.name}:`, error);
       return new Response(
         JSON.stringify({ error: error.message }),
         {
@@ -88,6 +122,24 @@ Deno.serve(async (req: Request) => {
           },
         }
       );
+    }
+
+    // Step 3: Update public.profiles table
+    const profileUpdates: any = {};
+    if (email) profileUpdates.email = email;
+    if (password) profileUpdates.password = password;
+    if (otherUpdates.full_name) profileUpdates.full_name = otherUpdates.full_name;
+    if (otherUpdates.age) profileUpdates.age = otherUpdates.age;
+
+    if (Object.keys(profileUpdates).length > 0) {
+      const { error: profileError } = await client
+        .from('profiles')
+        .update(profileUpdates)
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error(`Error updating profiles in ${config.name}:`, profileError);
+      }
     }
 
     return new Response(

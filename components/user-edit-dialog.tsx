@@ -32,6 +32,7 @@ interface UserEditDialogProps {
 export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps) {
   const [formData, setFormData] = useState({
     email: user.email || '',
+    password: '',
     first_name: user.first_name || '',
     last_name: user.last_name || '',
     full_name: user.full_name || '',
@@ -51,6 +52,7 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
     try {
       const updates = {
         email: formData.email,
+        password: formData.password || undefined,
         first_name: formData.first_name,
         last_name: formData.last_name,
         full_name: formData.full_name,
@@ -105,6 +107,18 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Leave blank to keep current password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
+              <p className="text-xs text-gray-500">Only enter a new password if you want to change it</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

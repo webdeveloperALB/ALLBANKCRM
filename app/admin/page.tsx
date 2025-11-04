@@ -251,7 +251,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">
-                CRM Panel Admin
+                Banking CRM
               </h1>
               <p className="text-sm text-gray-600 mt-1">Multi-Bank Administration Dashboard</p>
             </div>
