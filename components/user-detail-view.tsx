@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Bitcoin, Send, Activity, MessageSquare, FileBarChart, Building2, RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Bitcoin, Send, Activity, MessageSquare, FileBarChart, Building2, RefreshCw, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
 import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
+import { UserEditDialog } from '@/components/user-edit-dialog';
 import { BalanceManager } from '@/components/balance-manager';
 import { UserTaxesCard } from '@/components/user-taxes-card';
 import { UserMessagesCard } from '@/components/user-messages-card';
@@ -29,6 +30,7 @@ interface UserDetailViewProps {
 
 export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) {
   const [viewingKYC, setViewingKYC] = useState(false);
+  const [editingUser, setEditingUser] = useState(false);
   const [presence, setPresence] = useState<UserPresence | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -90,6 +92,30 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
     }
   };
 
+  const updateKYCStatus = async (status: string) => {
+    try {
+      const response = await fetch('/api/users/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bankKey: user.bank_key,
+          userId: user.id,
+          updates: { kyc_status: status }
+        })
+      });
+
+      if (response.ok) {
+        toast.success(`KYC status updated to ${status}`);
+        await onUpdate();
+      } else {
+        toast.error('Failed to update KYC status');
+      }
+    } catch (error) {
+      console.error('Error updating KYC status:', error);
+      toast.error('Error updating KYC status');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       <div className="bg-white/80 backdrop-blur-md border-b shadow-sm sticky top-0 z-50">
@@ -119,10 +145,50 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                   {presence?.is_online ? 'Online' : 'Offline'}
                 </span>
               </div>
+
+              {user.kyc_status === 'pending' && (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => updateKYCStatus('approved')}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Approve KYC
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => updateKYCStatus('rejected')}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    Reject KYC
+                  </Button>
+                </>
+              )}
+
+              {user.kyc_status === 'not_started' && (
+                <Button
+                  size="sm"
+                  onClick={() => updateKYCStatus('approved')}
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Skip KYC
+                </Button>
+              )}
+
               <Button onClick={() => setViewingKYC(true)} variant="outline" size="sm">
                 <FileText className="w-4 h-4 mr-2" />
                 KYC Documents
               </Button>
+
+              <Button onClick={() => setEditingUser(true)} variant="outline" size="sm">
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit User
+              </Button>
+
               <Button
                 onClick={() => setShowDeleteDialog(true)}
                 variant="destructive"
@@ -271,6 +337,17 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
         <KYCDocumentsDialog
           user={user}
           onClose={() => setViewingKYC(false)}
+        />
+      )}
+
+      {editingUser && (
+        <UserEditDialog
+          user={user}
+          onClose={() => setEditingUser(false)}
+          onSuccess={() => {
+            setEditingUser(false);
+            onUpdate();
+          }}
         />
       )}
 

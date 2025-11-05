@@ -403,47 +403,6 @@ export default function AdminPage() {
                           <Eye className="w-4 h-4 mr-1" />
                           View
                         </Button>
-                        {user.kyc_status === 'pending' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => updateKYCStatus(user, 'approved')}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => updateKYCStatus(user, 'rejected')}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {user.kyc_status === 'not_started' && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateKYCStatus(user, 'approved')}
-                            variant="outline"
-                          >
-                            Skip KYC
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setViewingKYC({ user })}
-                        >
-                          <FileText className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingUser(user)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
