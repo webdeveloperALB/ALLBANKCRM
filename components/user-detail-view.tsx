@@ -68,6 +68,8 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      console.log('Deleting user:', { userId: user.id, bankKey: user.bank_key });
+
       const response = await fetch('/api/users/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,16 +79,22 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
         })
       });
 
+      console.log('Delete response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('Delete successful:', result);
         toast.success('User deleted successfully');
+        setShowDeleteDialog(false);
         onBack();
       } else {
         const error = await response.json();
+        console.error('Delete failed:', error);
         toast.error(error.error || 'Failed to delete user');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting user:', error);
-      toast.error('Error deleting user');
+      toast.error(`Error deleting user: ${error.message || 'Unknown error'}`);
     } finally {
       setDeleting(false);
     }

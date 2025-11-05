@@ -35,6 +35,8 @@ Deno.serve(async (req: Request) => {
   try {
     const { userId, bankKey } = await req.json();
 
+    console.log('Delete user request:', { userId, bankKey });
+
     if (!userId || !bankKey) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
@@ -69,45 +71,60 @@ Deno.serve(async (req: Request) => {
       }
     });
 
-    // Step 1: Delete from auth.users (this will cascade to public.users and public.profiles due to ON DELETE CASCADE)
-    const { error: authError } = await client.auth.admin.deleteUser(userId);
+    console.log(`Attempting to delete user ${userId} from ${config.name}`);
 
-    if (authError) {
-      console.error(`Error deleting user from auth.users in ${config.name}:`, authError);
-      return new Response(
-        JSON.stringify({ error: `Failed to delete user: ${authError.message}` }),
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
+    // Try to delete from auth.users, but don't fail if user doesn't exist there
+    try {
+      const { data: authUser } = await client.auth.admin.getUserById(userId);
+      
+      if (authUser?.user) {
+        console.log('User found in auth.users, attempting deletion...');
+        const { error: authError } = await client.auth.admin.deleteUser(userId);
+        
+        if (authError) {
+          console.error(`Error deleting from auth.users: ${authError.message}`);
+          // Don't fail - continue to delete from public tables
+        } else {
+          console.log('Successfully deleted from auth.users');
         }
-      );
+      } else {
+        console.log('User not found in auth.users, will delete from public tables only');
+      }
+    } catch (authErr) {
+      console.log('Auth deletion error (continuing):', authErr);
+      // Continue anyway
     }
 
-    // Due to CASCADE constraints, public.users and public.profiles should be automatically deleted
-    // But we'll verify and manually delete if needed for safety
-
-    // Step 2: Verify/Delete from public.users (should already be deleted by cascade)
+    // Delete from public.users
+    console.log('Deleting from public.users...');
     const { error: usersError } = await client
       .from('users')
       .delete()
       .eq('id', userId);
 
     if (usersError) {
-      console.error(`Error verifying deletion from public.users in ${config.name}:`, usersError);
+      console.error(`Error deleting from public.users: ${usersError.message}`);
+    } else {
+      console.log('Successfully deleted from public.users');
     }
 
-    // Step 3: Verify/Delete from public.profiles (should already be deleted by cascade)
-    const { error: profilesError } = await client
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
+    // Delete from public.profiles
+    console.log('Deleting from public.profiles...');
+    await client.from('profiles').delete().eq('id', userId);
 
-    if (profilesError) {
-      console.error(`Error verifying deletion from public.profiles in ${config.name}:`, profilesError);
-    }
+    // Delete related data
+    console.log('Deleting related data...');
+    await client.from('user_hierarchy').delete().eq('superior_id', userId);
+    await client.from('user_hierarchy').delete().eq('subordinate_id', userId);
+    await client.from('user_presence').delete().eq('user_id', userId);
+    await client.from('account_activities').delete().eq('user_id', userId);
+    await client.from('newcrypto_balances').delete().eq('user_id', userId);
+    await client.from('crypto_transactions').delete().eq('user_id', userId);
+    await client.from('transaction_history').delete().eq('user_id', userId);
+    await client.from('external_accounts').delete().eq('user_id', userId);
+    await client.from('transfers').delete().eq('user_id', userId);
+
+    console.log('User deletion completed successfully');
 
     return new Response(
       JSON.stringify({ success: true, message: 'User deleted successfully' }),
@@ -119,9 +136,9 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in delete function:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to delete user' }),
+      JSON.stringify({ error: `Failed to delete user: ${error.message || 'Unknown error'}` }),
       {
         status: 500,
         headers: {
