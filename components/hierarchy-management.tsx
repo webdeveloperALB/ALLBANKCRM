@@ -5,9 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, UserPlus, Shield, ShieldCheck, Trash2, Network, AlertCircle, CheckCircle, Search } from 'lucide-react';
+import { Users, UserPlus, Shield, ShieldCheck, Trash2, Network, AlertCircle, Search } from 'lucide-react';
 import { getBankClient } from '@/lib/supabase-multi';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
@@ -40,7 +39,7 @@ interface HierarchyRelationship {
 
 export function HierarchyManagement() {
   const [users, setUsers] = useState<User[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]); // All users including non-admins
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [relationships, setRelationships] = useState<HierarchyRelationship[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
@@ -54,6 +53,9 @@ export function HierarchyManagement() {
   const [managerPopoverOpen, setManagerPopoverOpen] = useState(false);
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -63,7 +65,6 @@ export function HierarchyManagement() {
     try {
       setLoading(true);
 
-      // Fetch users from all banks
       const bankConfigs = [
         { key: 'digitalchain', name: 'Digital Chain Bank' },
         { key: 'cayman', name: 'Cayman Bank' },
@@ -71,12 +72,10 @@ export function HierarchyManagement() {
       ];
 
       const adminUsers: User[] = [];
-      const allUsersArray: User[] = [];
 
       for (const bank of bankConfigs) {
         const supabase = getBankClient(bank.key);
 
-        // Fetch admin users for role management
         const { data: adminData, error: adminError } = await supabase
           .from('users')
           .select('id, email, full_name, is_admin, is_manager, is_superiormanager, bank_origin')
@@ -93,29 +92,11 @@ export function HierarchyManagement() {
           }));
           adminUsers.push(...usersWithBank);
         }
-
-        // Fetch ALL users for assignment
-        const { data: allData, error: allError } = await supabase
-          .from('users')
-          .select('id, email, full_name, is_admin, is_manager, is_superiormanager, bank_origin')
-          .order('email');
-
-        if (allError) {
-          console.error(`Error fetching all users from ${bank.name}:`, allError);
-        } else if (allData) {
-          const usersWithBank = allData.map(user => ({
-            ...user,
-            bank_key: bank.key,
-            bank_origin: user.bank_origin || bank.name
-          }));
-          allUsersArray.push(...usersWithBank);
-        }
       }
 
       setUsers(adminUsers);
-      setAllUsers(allUsersArray);
+      console.log(`Loaded ${adminUsers.length} admin users across all banks`);
 
-      // Fetch hierarchy relationships from all banks
       const allRelationships: any[] = [];
 
       for (const bank of bankConfigs) {
@@ -161,6 +142,37 @@ export function HierarchyManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const searchUsers = async (query: string, bankKey: string) => {
+    try {
+      setSearching(true);
+      const response = await fetch(
+        `/api/hierarchy/search-users?query=${encodeURIComponent(query)}&bank_key=${bankKey}&limit=50`
+      );
+
+      if (!response.ok) throw new Error('Failed to search users');
+
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error: any) {
+      console.error('Error searching users:', error);
+      toast.error('Failed to search users');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const debouncedSearch = (query: string, bankKey: string) => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const timeout = setTimeout(() => {
+      searchUsers(query, bankKey);
+    }, 300);
+
+    setSearchTimeout(timeout);
   };
 
   const handleMakeManager = async (userId: string) => {
@@ -212,30 +224,18 @@ export function HierarchyManagement() {
   };
 
   const handleAssignUsersToManager = async () => {
-    console.log('=== ASSIGN BUTTON CLICKED ===');
-    console.log('handleAssignUsersToManager called', { selectedSuperiorId, selectedUserId });
-
-    if (assigning) {
-      console.log('Already assigning, skipping...');
-      return;
-    }
+    if (assigning) return;
 
     if (!selectedSuperiorId || !selectedUserId) {
-      console.log('Missing selections');
       toast.error('Please select both manager and user');
       return;
     }
 
     try {
       setAssigning(true);
-      console.log('Starting assignment process...');
 
       const manager = users.find(u => u.id === selectedSuperiorId);
-      const user = allUsers.find(u => u.id === selectedUserId);
-
-      console.log('Manager:', manager);
-      console.log('User:', user);
-      console.log('All users count:', allUsers.length);
+      const user = searchResults.find(u => u.id === selectedUserId);
 
       if (!manager || !user) {
         toast.error('Manager or user not found');
@@ -247,19 +247,15 @@ export function HierarchyManagement() {
         return;
       }
 
-      console.log('Inserting hierarchy with bank:', manager.bank_key);
       const supabase = getBankClient(manager.bank_key);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_hierarchy')
         .insert({
           superior_id: selectedSuperiorId,
           subordinate_id: selectedUserId,
           relationship_type: 'manager_to_user'
-        })
-        .select();
-
-      console.log('Insert result:', { data, error });
+        });
 
       if (error) throw error;
 
@@ -269,6 +265,8 @@ export function HierarchyManagement() {
       setSelectedUserId('');
       setManagerPopoverOpen(false);
       setUserPopoverOpen(false);
+      setSearchResults([]);
+      setSearchQuery('');
       await fetchData();
     } catch (error: any) {
       console.error('Error assigning user:', error);
@@ -324,7 +322,6 @@ export function HierarchyManagement() {
     if (!deleteConfirm.relationshipId) return;
 
     try {
-      // Try to delete from all banks
       const bankKeys = ['digitalchain', 'cayman', 'lithuanian'];
       let deleted = false;
 
@@ -356,15 +353,12 @@ export function HierarchyManagement() {
   const getManagers = () => users.filter(u => u.is_manager && u.is_admin);
   const getSuperiorManagers = () => users.filter(u => u.is_superiormanager && u.is_admin);
   const getRegularUsers = () => users.filter(u => !u.is_manager && !u.is_superiormanager && u.is_admin);
-  const getNonAdminUsers = () => users.filter(u => !u.is_admin);
 
-  // Get ALL users from the same bank as the selected manager (not just admins)
   const getUsersForSelectedManager = () => {
     if (!selectedSuperiorId) return [];
     const manager = users.find(u => u.id === selectedSuperiorId);
     if (!manager) return [];
-    // Return ALL users from the same bank, excluding managers and superior managers
-    return allUsers.filter(u =>
+    return searchResults.filter(u =>
       u.bank_key === manager.bank_key &&
       !u.is_manager &&
       !u.is_superiormanager &&
@@ -372,7 +366,6 @@ export function HierarchyManagement() {
     );
   };
 
-  // Get managers from the same bank as the selected superior manager
   const getManagersForSelectedSuperior = () => {
     if (!selectedSuperiorId) return [];
     const superiorManager = users.find(u => u.id === selectedSuperiorId);
@@ -434,21 +427,19 @@ export function HierarchyManagement() {
             </AlertDescription>
           </Alert>
 
-          {/* User Roles Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Users className="w-5 h-5" />
               User Roles
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Regular Admin Users */}
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Regular Admin Users</CardTitle>
+                  <CardTitle className="text-sm">Admin Users</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {getRegularUsers().length === 0 ? (
-                    <p className="text-sm text-gray-500">No regular users</p>
+                    <p className="text-sm text-gray-500">No admin users</p>
                   ) : (
                     getRegularUsers().map(user => (
                       <div key={user.id} className="flex items-center justify-between p-2 border rounded">
@@ -473,7 +464,6 @@ export function HierarchyManagement() {
                 </CardContent>
               </Card>
 
-              {/* Managers */}
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -511,7 +501,6 @@ export function HierarchyManagement() {
                 </CardContent>
               </Card>
 
-              {/* Superior Managers */}
               <Card className="md:col-span-2">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -543,7 +532,6 @@ export function HierarchyManagement() {
             </div>
           </div>
 
-          {/* Hierarchy Relationships */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Network className="w-5 h-5" />
@@ -593,7 +581,6 @@ export function HierarchyManagement() {
         </CardContent>
       </Card>
 
-      {/* Assignment Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent>
           <DialogHeader>
@@ -602,7 +589,7 @@ export function HierarchyManagement() {
             </DialogTitle>
             <DialogDescription>
               {assignType === 'assign_users'
-                ? 'Select a manager and a user to assign to them'
+                ? 'Select a manager and search for a user to assign to them'
                 : 'Select a superior manager and a manager to assign to them'}
             </DialogDescription>
           </DialogHeader>
@@ -642,6 +629,8 @@ export function HierarchyManagement() {
                             onSelect={() => {
                               setSelectedSuperiorId(user.id);
                               setSelectedUserId('');
+                              setSearchResults([]);
+                              setSearchQuery('');
                               setManagerPopoverOpen(false);
                             }}
                           >
@@ -662,10 +651,28 @@ export function HierarchyManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label>
-                {assignType === 'assign_users' ? 'Select User (from same bank)' : 'Select Manager (from same bank)'}
-              </Label>
-              <Popover open={userPopoverOpen} onOpenChange={setUserPopoverOpen}>
+              <div className="flex items-center justify-between">
+                <Label>
+                  {assignType === 'assign_users' ? 'Search User (from same bank)' : 'Select Manager (from same bank)'}
+                </Label>
+                {selectedSuperiorId && searchResults.length > 0 && (
+                  <span className="text-xs text-gray-500">
+                    {(assignType === 'assign_users' ? getUsersForSelectedManager() : getManagersForSelectedSuperior()).length} results
+                  </span>
+                )}
+              </div>
+              <Popover
+                open={userPopoverOpen}
+                onOpenChange={(open) => {
+                  setUserPopoverOpen(open);
+                  if (open && selectedSuperiorId && assignType === 'assign_users') {
+                    const manager = users.find(u => u.id === selectedSuperiorId);
+                    if (manager) {
+                      searchUsers('', manager.bank_key);
+                    }
+                  }
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -681,20 +688,36 @@ export function HierarchyManagement() {
                         })()
                       : !selectedSuperiorId
                       ? 'First select a manager/superior...'
-                      : assignType === 'assign_users' ? 'Choose a user...' : 'Choose a manager...'}
+                      : assignType === 'assign_users' ? 'Search for a user...' : 'Choose a manager...'}
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search..." />
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Type to search by name or email..."
+                      value={searchQuery}
+                      onValueChange={(value) => {
+                        setSearchQuery(value);
+                        if (assignType === 'assign_users' && selectedSuperiorId) {
+                          const manager = users.find(u => u.id === selectedSuperiorId);
+                          if (manager) {
+                            debouncedSearch(value, manager.bank_key);
+                          }
+                        }
+                      }}
+                    />
                     <CommandList>
-                      <CommandEmpty>No users from the same bank.</CommandEmpty>
+                      {searching ? (
+                        <CommandEmpty>Searching...</CommandEmpty>
+                      ) : (
+                        <CommandEmpty>No users found. Try a different search.</CommandEmpty>
+                      )}
                       <CommandGroup>
                         {(assignType === 'assign_users' ? getUsersForSelectedManager() : getManagersForSelectedSuperior()).map(user => (
                           <CommandItem
                             key={user.id}
-                            value={`${user.full_name || user.email} ${user.email}`}
+                            value={user.id}
                             onSelect={() => {
                               setSelectedUserId(user.id);
                               setUserPopoverOpen(false);
@@ -706,7 +729,10 @@ export function HierarchyManagement() {
                                 selectedUserId === user.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            {user.full_name || user.email} ({user.bank_origin})
+                            <div className="flex flex-col">
+                              <span>{user.full_name || user.email}</span>
+                              {user.full_name && <span className="text-xs text-gray-500">{user.email}</span>}
+                            </div>
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -722,20 +748,20 @@ export function HierarchyManagement() {
               setShowAssignDialog(false);
               setSelectedSuperiorId('');
               setSelectedUserId('');
+              setSearchResults([]);
+              setSearchQuery('');
             }}>
               Cancel
             </Button>
             <Button
               onClick={() => {
-                console.log('Assign button clicked!');
-                console.log('assignType:', assignType);
                 if (assignType === 'assign_users') {
                   handleAssignUsersToManager();
                 } else {
                   handleAssignManagerToSuperior();
                 }
               }}
-              disabled={assigning}
+              disabled={assigning || !selectedSuperiorId || !selectedUserId}
             >
               {assigning ? 'Assigning...' : 'Assign'}
             </Button>
@@ -743,7 +769,6 @@ export function HierarchyManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteConfirm.open}
         onOpenChange={(open) => setDeleteConfirm({ open, relationshipId: null })}
