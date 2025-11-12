@@ -36,19 +36,46 @@ Deno.serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("No authorization header");
+      return new Response(
+        JSON.stringify({ error: "No authorization header" }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const body = await req.json();
-    const { bank_key, user_id, client_id, activity_type, title, description, currency, display_amount, priority } = body;
+    const { bank_key, user_id, client_id, activity_type, title, description, currency, display_amount, priority, status, is_read, created_at, expires_at } = body;
 
     if (!bank_key || !user_id || !client_id || !activity_type || !title) {
-      throw new Error("Missing required fields");
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: bank_key, user_id, client_id, activity_type, or title" }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const bankConfig = BANKS[bank_key];
     if (!bankConfig) {
-      throw new Error(`Invalid bank key: ${bank_key}`);
+      return new Response(
+        JSON.stringify({ error: `Invalid bank key: ${bank_key}` }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     const supabase = createClient(bankConfig.url, bankConfig.serviceRoleKey, {
@@ -58,23 +85,46 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    const insertData: any = {
+      user_id,
+      client_id,
+      activity_type,
+      title,
+      description: description || null,
+      currency: currency || 'usd',
+      display_amount: display_amount || 0,
+      priority: priority || 'normal',
+      status: status || 'active',
+      is_read: is_read || false,
+    };
+
+    if (created_at) {
+      insertData.created_at = created_at;
+    }
+
+    if (expires_at) {
+      insertData.expires_at = expires_at;
+    }
+
     const { data, error } = await supabase
       .from("account_activities")
-      .insert({
-        user_id,
-        client_id,
-        activity_type,
-        title,
-        description: description || null,
-        currency: currency || 'usd',
-        display_amount: display_amount || 0,
-        priority: priority || 'normal',
-        status: 'active',
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Database error:", error);
+      return new Response(
+        JSON.stringify({ error: error.message || "Database error occurred" }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
 
     return new Response(JSON.stringify(data), {
       status: 200,
@@ -86,7 +136,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error occurred" }),
       {
         status: 500,
         headers: {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseConfig } from '@/lib/supabase-env';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,10 +16,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const { supabaseUrl, supabaseAnonKey: supabaseKey, isConfigured } = getSupabaseConfig();
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!isConfigured) {
       console.error('Missing Supabase environment variables');
       return NextResponse.json(
         { error: 'Server configuration error' },

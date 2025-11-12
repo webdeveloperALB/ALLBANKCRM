@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { bank_key, activity_id, activity_type, title, description, currency, display_amount, priority } = body;
+    const { bank_key, activity_id, activity_type, title, description, currency, display_amount, priority, status, is_read, created_at, expires_at } = body;
 
     if (!bank_key || !activity_id) {
       throw new Error("Missing required fields");
@@ -65,6 +65,10 @@ Deno.serve(async (req: Request) => {
     if (currency) updateData.currency = currency;
     if (display_amount !== undefined) updateData.display_amount = display_amount;
     if (priority) updateData.priority = priority;
+    if (status) updateData.status = status;
+    if (is_read !== undefined) updateData.is_read = is_read;
+    if (created_at) updateData.created_at = created_at;
+    if (expires_at !== undefined) updateData.expires_at = expires_at;
 
     const { data, error } = await supabase
       .from("account_activities")

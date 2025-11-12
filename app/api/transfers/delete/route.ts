@@ -3,7 +3,7 @@ import { getBankClient } from '@/lib/supabase-multi';
 
 export const dynamic = 'force-dynamic';
 
-export async function DELETE(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { bank_key, transfer_id } = body;

@@ -42,6 +42,9 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
     description: '',
     fee_amount: '0',
     status: 'pending' as TransferStatus,
+    created_at: '',
+    processed_at: '',
+    reference_number: '',
   });
 
   const [bankFormData, setBankFormData] = useState({
@@ -81,14 +84,19 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
     setSubmitting(true);
 
     try {
+      const payload = {
+        ...formData,
+        user_id: user.id,
+        bank_key: user.bank_key,
+        created_at: formData.created_at ? new Date(formData.created_at).toISOString() : new Date().toISOString(),
+        processed_at: formData.processed_at ? new Date(formData.processed_at).toISOString() : null,
+        reference_number: formData.reference_number || null,
+      };
+
       const response = await fetch('/api/transfers/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          user_id: user.id,
-          bank_key: user.bank_key,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -141,14 +149,19 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
     setSubmitting(true);
 
     try {
+      const payload = {
+        transfer_id: selectedTransfer.id,
+        bank_key: user.bank_key,
+        ...formData,
+        created_at: formData.created_at ? new Date(formData.created_at).toISOString() : new Date().toISOString(),
+        processed_at: formData.processed_at ? new Date(formData.processed_at).toISOString() : null,
+        reference_number: formData.reference_number || null,
+      };
+
       const response = await fetch('/api/transfers/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transfer_id: selectedTransfer.id,
-          bank_key: user.bank_key,
-          ...formData,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -182,7 +195,7 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
 
     try {
       const response = await fetch('/api/transfers/delete', {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transfer_id: selectedTransfer.id,
@@ -214,6 +227,7 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
   };
 
   const resetForm = () => {
+    const now = new Date().toISOString().slice(0, 16);
     setFormData({
       from_currency: 'USD',
       to_currency: 'EUR',
@@ -224,6 +238,9 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
       description: '',
       fee_amount: '0',
       status: 'pending',
+      created_at: now,
+      processed_at: '',
+      reference_number: '',
     });
     setBankFormData({
       bank_name: '',
@@ -252,6 +269,9 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
       description: transfer.description || '',
       fee_amount: transfer.fee_amount,
       status: transfer.status,
+      created_at: transfer.created_at ? new Date(transfer.created_at).toISOString().slice(0, 16) : '',
+      processed_at: transfer.processed_at ? new Date(transfer.processed_at).toISOString().slice(0, 16) : '',
+      reference_number: transfer.reference_number || '',
     });
     setIsEditDialogOpen(true);
   };
@@ -518,6 +538,35 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Reference Number</Label>
+              <Input
+                value={formData.reference_number}
+                onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
+                placeholder="Optional reference number"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Created At</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.created_at}
+                  onChange={(e) => setFormData({ ...formData, created_at: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Processed At (Optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.processed_at}
+                  onChange={(e) => setFormData({ ...formData, processed_at: e.target.value })}
+                />
+              </div>
+            </div>
+
             {formData.transfer_type === 'bank' && (
               <>
                 <Separator />
@@ -746,6 +795,35 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={2}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reference Number</Label>
+              <Input
+                value={formData.reference_number}
+                onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
+                placeholder="Optional reference number"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Created At</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.created_at}
+                  onChange={(e) => setFormData({ ...formData, created_at: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Processed At (Optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.processed_at}
+                  onChange={(e) => setFormData({ ...formData, processed_at: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 

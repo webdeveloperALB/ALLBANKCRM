@@ -435,11 +435,11 @@ export function HierarchyManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Admin Users</CardTitle>
+                  <CardTitle className="text-sm">Regular Admin Users</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {getRegularUsers().length === 0 ? (
-                    <p className="text-sm text-gray-500">No admin users</p>
+                    <p className="text-sm text-gray-500">No regular users</p>
                   ) : (
                     getRegularUsers().map(user => (
                       <div key={user.id} className="flex items-center justify-between p-2 border rounded">

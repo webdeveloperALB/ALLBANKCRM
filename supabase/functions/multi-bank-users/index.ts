@@ -49,7 +49,6 @@ Deno.serve(async (req: Request) => {
     let accessibleUserIds: string[] = [];
     let shouldApplyHierarchy = false;
 
-    // If user is a manager or superior manager, check if they have assigned users
     if ((isManager || isSuperiorManager) && userId && userBankKey) {
       const userBankConfig = BANKS[userBankKey];
       if (userBankConfig) {
@@ -68,23 +67,19 @@ Deno.serve(async (req: Request) => {
           if (hierarchyError) {
             console.error('Error in get_accessible_users RPC:', hierarchyError);
             console.error('Full error details:', JSON.stringify(hierarchyError));
-            // If function doesn't exist or error, treat as no assigned users (show all)
             console.log('No hierarchy function available, showing all users (admin mode)');
             shouldApplyHierarchy = false;
           } else if (accessibleData && accessibleData.length > 0) {
-            // Manager HAS assigned users - apply hierarchy filtering
             accessibleUserIds = accessibleData.map((item: any) => item.accessible_user_id);
             shouldApplyHierarchy = true;
             console.log('Manager has assigned users:', accessibleUserIds);
             console.log('Applying hierarchy filtering');
           } else {
-            // Manager has NO assigned users - show all (admin privileges)
             console.log('Manager has no assigned users, showing all users (admin mode)');
             shouldApplyHierarchy = false;
           }
         } catch (err) {
           console.error('Exception calling get_accessible_users:', err);
-          // On error, default to showing all users (admin mode)
           console.log('Error checking hierarchy, defaulting to admin mode (show all)');
           shouldApplyHierarchy = false;
         }
@@ -109,14 +104,11 @@ Deno.serve(async (req: Request) => {
         .from('users')
         .select('*', { count: 'exact' });
 
-      // Apply hierarchy filter for managers/superior managers
       if (shouldApplyHierarchy) {
         if (key === userBankKey && accessibleUserIds.length > 0) {
-          // Only show accessible users in their bank
           console.log(`Filtering users in ${key} to accessible IDs:`, accessibleUserIds);
           query = query.in('id', accessibleUserIds);
         } else {
-          // Skip other banks entirely for managers
           console.log(`Skipping bank ${key} for manager/superior manager`);
           continue;
         }

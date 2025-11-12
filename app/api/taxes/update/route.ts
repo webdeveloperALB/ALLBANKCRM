@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseConfig } from '@/lib/supabase-env';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const { supabaseUrl, supabaseAnonKey: supabaseKey, isConfigured } = getSupabaseConfig();
+
+    if (!isConfigured) {
+      return NextResponse.json(
+        { error: 'Missing Supabase configuration' },
+        { status: 500 }
+      );
+    }
 
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/multi-bank-taxes-update`;
 

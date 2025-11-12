@@ -46,6 +46,10 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
     currency: 'usd' as ActivityCurrency,
     display_amount: '0',
     priority: 'normal' as ActivityPriority,
+    status: 'active' as 'active' | 'archived' | 'deleted',
+    is_read: false,
+    created_at: '',
+    expires_at: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -74,6 +78,8 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
   const handleOpenDialog = (activity?: AccountActivity) => {
     if (activity) {
       setEditingActivity(activity);
+      const createdDate = new Date(activity.created_at);
+      const expiresDate = activity.expires_at ? new Date(activity.expires_at) : null;
       setFormData({
         activity_type: activity.activity_type,
         title: activity.title,
@@ -81,9 +87,14 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
         currency: activity.currency,
         display_amount: activity.display_amount.toString(),
         priority: activity.priority,
+        status: activity.status as 'active' | 'archived' | 'deleted',
+        is_read: activity.is_read || false,
+        created_at: createdDate.toISOString().slice(0, 16),
+        expires_at: expiresDate ? expiresDate.toISOString().slice(0, 16) : '',
       });
     } else {
       setEditingActivity(null);
+      const now = new Date().toISOString().slice(0, 16);
       setFormData({
         activity_type: 'account_notice',
         title: '',
@@ -91,6 +102,10 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
         currency: 'usd',
         display_amount: '0',
         priority: 'normal',
+        status: 'active',
+        is_read: false,
+        created_at: now,
+        expires_at: '',
       });
     }
     setShowDialog(true);
@@ -123,6 +138,10 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
         currency: formData.currency,
         display_amount: parseFloat(formData.display_amount) || 0,
         priority: formData.priority,
+        status: formData.status,
+        is_read: formData.is_read,
+        created_at: formData.created_at ? new Date(formData.created_at).toISOString() : new Date().toISOString(),
+        expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null,
         ...(editingActivity && { activity_id: editingActivity.id }),
       };
 
@@ -362,6 +381,65 @@ export function UserActivitiesCard({ user }: UserActivitiesCardProps) {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: 'active' | 'archived' | 'deleted') =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                    <SelectItem value="deleted">Deleted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Is Read</Label>
+                <Select
+                  value={formData.is_read.toString()}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, is_read: value === 'true' })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="false">Unread</SelectItem>
+                    <SelectItem value="true">Read</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Created At</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.created_at}
+                  onChange={(e) => setFormData({ ...formData, created_at: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Expires At (Optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.expires_at}
+                  onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+                />
               </div>
             </div>
           </div>

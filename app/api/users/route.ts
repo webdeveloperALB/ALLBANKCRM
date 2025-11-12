@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseConfig } from '@/lib/supabase-env';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,14 +17,18 @@ export async function GET(request: NextRequest) {
     const isManager = searchParams.get('is_manager') || 'false';
     const isSuperiorManager = searchParams.get('is_superiormanager') || 'false';
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const { supabaseUrl, supabaseAnonKey, isConfigured } = getSupabaseConfig();
+
+    if (!isConfigured) {
+      console.error('Missing Supabase environment variables');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/multi-bank-users?page=${page}&perPage=${perPage}&bank=${bankFilter}&kyc=${kycFilter}&search=${encodeURIComponent(search)}&user_id=${userId}&user_bank_key=${bankKey}&is_admin=${isAdmin}&is_manager=${isManager}&is_superiormanager=${isSuperiorManager}`;
 
     const response = await fetch(edgeFunctionUrl, {
       headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
+        'Authorization': `Bearer ${supabaseAnonKey}`,
         'Content-Type': 'application/json',
       },
     });
