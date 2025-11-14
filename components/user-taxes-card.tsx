@@ -51,7 +51,9 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
   const [editData, setEditData] = useState({
     taxes: '0.00',
     on_hold: '0.00',
-    paid: '0.00'
+    paid: '0.00',
+    created_at: '',
+    updated_at: ''
   });
 
   const [newTransaction, setNewTransaction] = useState({
@@ -81,7 +83,9 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         setEditData({
           taxes: data.taxes || '0.00',
           on_hold: data.on_hold || '0.00',
-          paid: data.paid || '0.00'
+          paid: data.paid || '0.00',
+          created_at: data.created_at ? new Date(data.created_at).toISOString().slice(0, 16) : '',
+          updated_at: data.updated_at ? new Date(data.updated_at).toISOString().slice(0, 16) : ''
         });
       }
     } catch (error) {
@@ -117,7 +121,9 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
           userId: user.id,
           taxes: editData.taxes,
           on_hold: editData.on_hold,
-          paid: editData.paid
+          paid: editData.paid,
+          created_at: editData.created_at ? new Date(editData.created_at).toISOString() : null,
+          updated_at: editData.updated_at ? new Date(editData.updated_at).toISOString() : null
         })
       });
 
@@ -286,47 +292,84 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
           </div>
         </div>
 
-        <div className="flex items-end gap-2 mb-4">
-          <div className="flex-1">
-            <Label htmlFor="taxes" className="text-sm mb-1">Taxes Owed</Label>
-            <Input
-              id="taxes"
-              type="text"
-              value={editData.taxes}
-              onChange={(e) => setEditData({ ...editData, taxes: e.target.value })}
-              placeholder="0.00"
-              className="h-9 text-sm"
-            />
+        <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded mb-4">
+          <div>
+            <div className="text-xs text-slate-500 mb-1">Created At</div>
+            <div className="text-sm font-mono">{taxes?.created_at ? new Date(taxes.created_at).toLocaleString() : 'N/A'}</div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-500 mb-1">Updated At</div>
+            <div className="text-sm font-mono">{taxes?.updated_at ? new Date(taxes.updated_at).toLocaleString() : 'N/A'}</div>
+          </div>
+        </div>
+
+        <div className="space-y-4 mb-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor="taxes" className="text-sm mb-1">Taxes Owed</Label>
+              <Input
+                id="taxes"
+                type="text"
+                value={editData.taxes}
+                onChange={(e) => setEditData({ ...editData, taxes: e.target.value })}
+                placeholder="0.00"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            <div className="flex-1">
+              <Label htmlFor="on_hold" className="text-sm mb-1">On Hold</Label>
+              <Input
+                id="on_hold"
+                type="text"
+                value={editData.on_hold}
+                onChange={(e) => setEditData({ ...editData, on_hold: e.target.value })}
+                placeholder="0.00"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            <div className="flex-1">
+              <Label htmlFor="paid" className="text-sm mb-1">Paid</Label>
+              <Input
+                id="paid"
+                type="text"
+                value={editData.paid}
+                onChange={(e) => setEditData({ ...editData, paid: e.target.value })}
+                placeholder="0.00"
+                className="h-9 text-sm"
+              />
+            </div>
+
+            <Button onClick={handleSave} disabled={saving} size="sm" className="h-9">
+              <Save className="w-4 h-4 mr-1" />
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
           </div>
 
-          <div className="flex-1">
-            <Label htmlFor="on_hold" className="text-sm mb-1">On Hold</Label>
-            <Input
-              id="on_hold"
-              type="text"
-              value={editData.on_hold}
-              onChange={(e) => setEditData({ ...editData, on_hold: e.target.value })}
-              placeholder="0.00"
-              className="h-9 text-sm"
-            />
-          </div>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Label htmlFor="created_at" className="text-sm mb-1">Created At</Label>
+              <Input
+                id="created_at"
+                type="datetime-local"
+                value={editData.created_at}
+                onChange={(e) => setEditData({ ...editData, created_at: e.target.value })}
+                className="h-9 text-sm"
+              />
+            </div>
 
-          <div className="flex-1">
-            <Label htmlFor="paid" className="text-sm mb-1">Paid</Label>
-            <Input
-              id="paid"
-              type="text"
-              value={editData.paid}
-              onChange={(e) => setEditData({ ...editData, paid: e.target.value })}
-              placeholder="0.00"
-              className="h-9 text-sm"
-            />
+            <div className="flex-1">
+              <Label htmlFor="updated_at" className="text-sm mb-1">Updated At</Label>
+              <Input
+                id="updated_at"
+                type="datetime-local"
+                value={editData.updated_at}
+                onChange={(e) => setEditData({ ...editData, updated_at: e.target.value })}
+                className="h-9 text-sm"
+              />
+            </div>
           </div>
-
-          <Button onClick={handleSave} disabled={saving} size="sm" className="h-9">
-            <Save className="w-4 h-4 mr-1" />
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
         </div>
 
         <div className="flex-1 min-h-0 pt-6">

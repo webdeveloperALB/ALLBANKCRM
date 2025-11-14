@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { userId, bankKey, taxes, on_hold, paid } = await req.json();
+    const { userId, bankKey, taxes, on_hold, paid, created_at, updated_at } = await req.json();
 
     if (!userId || !bankKey) {
       return new Response(
@@ -69,15 +69,25 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    const updateData: any = {
+      user_id: userId,
+      taxes: taxes || '0.00',
+      on_hold: on_hold || '0.00',
+      paid: paid || '0.00'
+    };
+
+    if (created_at) {
+      updateData.created_at = created_at;
+    }
+
+    if (updated_at) {
+      updateData.updated_at = updated_at;
+    }
+
     const { data, error } = await client
       .from('taxes')
       .upsert(
-        {
-          user_id: userId,
-          taxes: taxes || '0.00',
-          on_hold: on_hold || '0.00',
-          paid: paid || '0.00'
-        },
+        updateData,
         { onConflict: 'user_id' }
       )
       .select()

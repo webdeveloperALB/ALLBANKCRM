@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { bankKey, userId, taxes, on_hold, paid } = body;
+    const { bankKey, userId, taxes, on_hold, paid, created_at, updated_at } = body;
 
     if (!bankKey || !userId) {
       return NextResponse.json(
@@ -37,7 +37,9 @@ export async function POST(request: NextRequest) {
         bankKey,
         taxes,
         on_hold,
-        paid
+        paid,
+        created_at,
+        updated_at
       }),
     });
 
