@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Bitcoin, Send, Activity, MessageSquare, FileBarChart, Building2, RefreshCw, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Send, Activity, MessageSquare, FileBarChart, Building2, RefreshCw, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
 import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
 import { UserEditDialog } from '@/components/user-edit-dialog';
 import { BalanceManager } from '@/components/balance-manager';
@@ -16,9 +16,9 @@ import { UserMessagesCard } from '@/components/user-messages-card';
 import { UserActivitiesCard } from '@/components/user-activities-card';
 import { UserExternalAccountsCard } from '@/components/user-external-accounts-card';
 import { UserTransfersCard } from '@/components/user-transfers-card';
-import { UserCryptoBalancesCard } from '@/components/user-crypto-balances-card';
 import { UserCryptoTransactionsCard } from '@/components/user-crypto-transactions-card';
 import { UserCardsManagement } from '@/components/user-cards-management';
+import { UserTransactionHistoryCard } from '@/components/user-transaction-history-card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 
@@ -211,134 +211,134 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-6 py-8">
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6 animate-in">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{user.email}</h1>
-              <p className="text-gray-500 mt-1">User ID: {user.id}</p>
+      <div className="max-w-[1800px] mx-auto px-6 py-6">
+        <div className="flex gap-4">
+          <div className="w-64 flex-shrink-0">
+            <div className="bg-white rounded-lg shadow-sm border p-4 sticky top-20">
+              <div className="mb-3">
+                <Badge variant="secondary" className="text-xs px-2 py-1 mb-2">
+                  {user.bank_name}
+                </Badge>
+                <h2 className="text-base font-bold text-gray-900 break-words mb-1">{user.email}</h2>
+              </div>
+
+              <Separator className="my-3" />
+
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">User ID</div>
+                  <div className="text-xs font-mono text-gray-900 break-all">{user.id}</div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Password</div>
+                  <div className="text-sm text-gray-900">{user.password || 'Not set'}</div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Location</div>
+                  <div className="text-sm text-gray-900">
+                    {presence?.country ? (
+                      <>{presence.city ? `${presence.city}, ` : ''}{presence.country}</>
+                    ) : (
+                      'Unknown'
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Roles</div>
+                  <div className="flex gap-1 flex-wrap">
+                    {user.is_admin && <Badge className="bg-blue-600 text-xs py-0">Admin</Badge>}
+                    {user.is_manager && <Badge variant="outline" className="text-xs py-0">Manager</Badge>}
+                    {user.is_superiormanager && <Badge variant="outline" className="text-xs py-0">Superior</Badge>}
+                    {!user.is_admin && !user.is_manager && !user.is_superiormanager && (
+                      <span className="text-xs text-gray-500">None</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">KYC Status</div>
+                  <Badge
+                    className={`text-xs py-0 ${
+                      user.kyc_status === 'approved'
+                        ? 'bg-green-100 text-green-800'
+                        : user.kyc_status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : user.kyc_status === 'rejected'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {user.kyc_status || 'Not Started'}
+                  </Badge>
+                </div>
+              </div>
             </div>
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              {user.bank_name}
-            </Badge>
           </div>
 
-          <Separator className="my-4" />
+          <div className="flex-1 min-w-0">
+            <Tabs defaultValue="balances" className="w-full">
+              <TabsList className="w-full bg-white border shadow-sm h-10 p-1 mb-4">
+                <TabsTrigger value="balances" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <Wallet className="w-3 h-3" />
+                  Balances
+                </TabsTrigger>
+                <TabsTrigger value="cards" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <CreditCard className="w-3 h-3" />
+                  Cards
+                </TabsTrigger>
+                <TabsTrigger value="transfers" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <Send className="w-3 h-3" />
+                  Transfers
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <Activity className="w-3 h-3" />
+                  Activity
+                </TabsTrigger>
+                <TabsTrigger value="messages" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <MessageSquare className="w-3 h-3" />
+                  Messages
+                </TabsTrigger>
+                <TabsTrigger value="taxes" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <FileBarChart className="w-3 h-3" />
+                  Taxes
+                </TabsTrigger>
+              </TabsList>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Password</div>
-              <div className="text-base font-medium text-gray-900">{user.password || 'Not set'}</div>
-            </div>
+              <TabsContent value="balances" className="space-y-4 mt-0">
+                <BalanceManager key={`balance-${refreshKey}`} bankKey={user.bank_key} userId={user.id} />
+                <UserTransactionHistoryCard key={`transaction-history-${refreshKey}`} user={user} />
+                <UserTaxesCard key={`taxes-${refreshKey}`} user={user} />
+                <UserCryptoTransactionsCard key={`crypto-transactions-${refreshKey}`} user={user} />
+              </TabsContent>
 
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Location</div>
-              <div className="text-base font-medium text-gray-900">
-                {presence?.country ? (
-                  <>{presence.city ? `${presence.city}, ` : ''}{presence.country}</>
-                ) : (
-                  'Unknown'
-                )}
-              </div>
-            </div>
+              <TabsContent value="cards" className="space-y-4 mt-0">
+                <UserCardsManagement key={`cards-${refreshKey}`} user={user} />
+              </TabsContent>
 
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Roles</div>
-              <div className="flex gap-2 flex-wrap">
-                {user.is_admin && <Badge className="bg-blue-600">Admin</Badge>}
-                {user.is_manager && <Badge variant="outline">Manager</Badge>}
-                {user.is_superiormanager && <Badge variant="outline">Superior</Badge>}
-                {!user.is_admin && !user.is_manager && !user.is_superiormanager && (
-                  <span className="text-sm text-gray-500">No roles assigned</span>
-                )}
-              </div>
-            </div>
+              <TabsContent value="transfers" className="space-y-4 mt-0">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <UserExternalAccountsCard key={`external-accounts-${refreshKey}`} user={user} />
+                  <UserTransfersCard key={`transfers-${refreshKey}`} user={user} />
+                </div>
+              </TabsContent>
 
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">KYC Status</div>
-              <Badge
-                className={
-                  user.kyc_status === 'approved'
-                    ? 'bg-green-100 text-green-800'
-                    : user.kyc_status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : user.kyc_status === 'rejected'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-gray-100 text-gray-800'
-                }
-              >
-                {user.kyc_status || 'Not Started'}
-              </Badge>
-            </div>
+              <TabsContent value="activity" className="space-y-4 mt-0">
+                <UserActivitiesCard key={`activities-${refreshKey}`} user={user} />
+              </TabsContent>
+
+              <TabsContent value="messages" className="space-y-4 mt-0">
+                <UserMessagesCard key={`messages-${refreshKey}`} user={user} />
+              </TabsContent>
+
+              <TabsContent value="taxes" className="space-y-4 mt-0">
+                <UserTaxesCard key={`taxes-${refreshKey}`} user={user} />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
-
-        <Tabs defaultValue="balances" className="w-full">
-          <TabsList className="w-full bg-white border shadow-sm h-12 p-1 mb-6">
-            <TabsTrigger value="balances" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <Wallet className="w-4 h-4" />
-              Balances
-            </TabsTrigger>
-            <TabsTrigger value="cards" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <CreditCard className="w-4 h-4" />
-              Cards
-            </TabsTrigger>
-            <TabsTrigger value="crypto" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <Bitcoin className="w-4 h-4" />
-              Cryptocurrency
-            </TabsTrigger>
-            <TabsTrigger value="transfers" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <Send className="w-4 h-4" />
-              Transfers
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <Activity className="w-4 h-4" />
-              Activity
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <MessageSquare className="w-4 h-4" />
-              Messages
-            </TabsTrigger>
-            <TabsTrigger value="other" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
-              <FileBarChart className="w-4 h-4" />
-              Taxes
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="balances" className="space-y-6">
-            <BalanceManager key={`balance-${refreshKey}`} bankKey={user.bank_key} userId={user.id} />
-          </TabsContent>
-
-          <TabsContent value="cards" className="space-y-6">
-            <UserCardsManagement key={`cards-${refreshKey}`} user={user} />
-          </TabsContent>
-
-          <TabsContent value="crypto" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <UserCryptoBalancesCard key={`crypto-balances-${refreshKey}`} user={user} />
-              <UserCryptoTransactionsCard key={`crypto-transactions-${refreshKey}`} user={user} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="transfers" className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <UserExternalAccountsCard key={`external-accounts-${refreshKey}`} user={user} />
-              <UserTransfersCard key={`transfers-${refreshKey}`} user={user} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="activity" className="space-y-6">
-            <UserActivitiesCard key={`activities-${refreshKey}`} user={user} />
-          </TabsContent>
-
-          <TabsContent value="messages" className="space-y-6">
-            <UserMessagesCard key={`messages-${refreshKey}`} user={user} />
-          </TabsContent>
-
-          <TabsContent value="other" className="space-y-6">
-            <UserTaxesCard key={`taxes-${refreshKey}`} user={user} />
-          </TabsContent>
-        </Tabs>
       </div>
 
       {viewingKYC && (
