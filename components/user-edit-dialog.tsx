@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth-context';
 
 interface UserEditDialogProps {
   user: UserWithBank;
@@ -30,6 +31,7 @@ interface UserEditDialogProps {
 }
 
 export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps) {
+  const { user: currentUser } = useAuth();
   const [formData, setFormData] = useState({
     email: user.email || '',
     password: '',
@@ -44,6 +46,9 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
     bank_origin: user.bank_origin
   });
   const [saving, setSaving] = useState(false);
+
+  const isCurrentUserAdmin = currentUser?.is_admin === true;
+  const canEditManagerRoles = isCurrentUserAdmin;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,44 +194,56 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
 
             <div className="grid gap-3">
               <Label>User Roles</Label>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_admin"
-                  checked={formData.is_admin}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_admin: checked as boolean })
-                  }
-                />
-                <Label htmlFor="is_admin" className="font-normal cursor-pointer">
-                  Admin
-                </Label>
-              </div>
+              {canEditManagerRoles && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_admin"
+                    checked={formData.is_admin}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_admin: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="is_admin" className="font-normal cursor-pointer">
+                    Admin
+                  </Label>
+                </div>
+              )}
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_manager"
-                  checked={formData.is_manager}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_manager: checked as boolean })
-                  }
-                />
-                <Label htmlFor="is_manager" className="font-normal cursor-pointer">
-                  Manager
-                </Label>
-              </div>
+              {canEditManagerRoles && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_manager"
+                    checked={formData.is_manager}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_manager: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="is_manager" className="font-normal cursor-pointer">
+                    Manager
+                  </Label>
+                </div>
+              )}
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_superiormanager"
-                  checked={formData.is_superiormanager}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_superiormanager: checked as boolean })
-                  }
-                />
-                <Label htmlFor="is_superiormanager" className="font-normal cursor-pointer">
-                  Superior Manager
-                </Label>
-              </div>
+              {canEditManagerRoles && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_superiormanager"
+                    checked={formData.is_superiormanager}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_superiormanager: checked as boolean })
+                    }
+                  />
+                  <Label htmlFor="is_superiormanager" className="font-normal cursor-pointer">
+                    Superior Manager
+                  </Label>
+                </div>
+              )}
+
+              {!canEditManagerRoles && (
+                <p className="text-sm text-muted-foreground">
+                  You do not have permission to edit user roles.
+                </p>
+              )}
             </div>
           </div>
 
