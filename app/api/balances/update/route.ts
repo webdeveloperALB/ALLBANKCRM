@@ -26,69 +26,82 @@ export async function POST(request: NextRequest) {
 
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/multi-bank-balances`;
 
-    const updates: any = {};
+    const updatePromises: Promise<Response>[] = [];
+    const errors: string[] = [];
 
     if (balances.usd !== undefined) {
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          bankKey,
-          balanceType: 'usd',
-          operation,
-          updates: { balance: balances.usd }
+      updatePromises.push(
+        fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            bankKey,
+            balanceType: 'usd',
+            operation,
+            updates: { balance: balances.usd }
+          })
+        }).then(async (response) => {
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            errors.push(`USD: ${errorData.error || 'Update failed'}`);
+          }
+          return response;
         })
-      });
-
-      if (!response.ok) {
-        console.error('USD balance update failed');
-      }
+      );
     }
 
     if (balances.euro !== undefined) {
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          bankKey,
-          balanceType: 'euro',
-          operation,
-          updates: { balance: balances.euro }
+      updatePromises.push(
+        fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            bankKey,
+            balanceType: 'euro',
+            operation,
+            updates: { balance: balances.euro }
+          })
+        }).then(async (response) => {
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            errors.push(`EUR: ${errorData.error || 'Update failed'}`);
+          }
+          return response;
         })
-      });
-
-      if (!response.ok) {
-        console.error('Euro balance update failed');
-      }
+      );
     }
 
     if (balances.cad !== undefined) {
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          bankKey,
-          balanceType: 'cad',
-          operation,
-          updates: { balance: balances.cad }
+      updatePromises.push(
+        fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            bankKey,
+            balanceType: 'cad',
+            operation,
+            updates: { balance: balances.cad }
+          })
+        }).then(async (response) => {
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            errors.push(`CAD: ${errorData.error || 'Update failed'}`);
+          }
+          return response;
         })
-      });
-
-      if (!response.ok) {
-        console.error('CAD balance update failed');
-      }
+      );
     }
 
     if (balances.crypto !== undefined) {
@@ -98,30 +111,47 @@ export async function POST(request: NextRequest) {
       if (balances.crypto.usdt !== undefined) cryptoUpdates.usdt_balance = balances.crypto.usdt;
 
       if (Object.keys(cryptoUpdates).length > 0) {
-        const response = await fetch(edgeFunctionUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId,
-            bankKey,
-            balanceType: 'crypto',
-            operation,
-            updates: cryptoUpdates
+        updatePromises.push(
+          fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              bankKey,
+              balanceType: 'crypto',
+              operation,
+              updates: cryptoUpdates
+            })
+          }).then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+              errors.push(`Crypto: ${errorData.error || 'Update failed'}`);
+            }
+            return response;
           })
-        });
-
-        if (!response.ok) {
-          console.error('Crypto balance update failed');
-        }
+        );
       }
+    }
+
+    await Promise.all(updatePromises);
+
+    if (errors.length > 0) {
+      console.error('Balance update errors:', errors);
+      return NextResponse.json(
+        { error: `Some updates failed: ${errors.join(', ')}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating balances:', error);
-    return NextResponse.json({ error: 'Failed to update balances' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to update balances' },
+      { status: 500 }
+    );
   }
 }

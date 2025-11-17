@@ -93,6 +93,7 @@ export function UserBalancesCard({ user }: UserBalancesCardProps) {
       });
 
       if (response.ok) {
+        toast.success('Balances updated successfully!');
         await fetchBalances();
         if (operation === 'add' || operation === 'deduct') {
           setEditData({
@@ -107,14 +108,12 @@ export function UserBalancesCard({ user }: UserBalancesCardProps) {
       } else {
         const errorData = await response.json();
         console.error('Balance update error:', errorData);
-        const errorMsg = errorData.code
-          ? `${errorData.error}\nCode: ${errorData.code}\nHint: ${errorData.hint || 'N/A'}`
-          : errorData.error;
+        const errorMsg = errorData.error || 'Unknown error occurred';
         toast.error(`Failed to update balances: ${errorMsg}`);
       }
     } catch (error) {
       console.error('Error updating balances:', error);
-      toast.error('Error updating balances: ' + error);
+      toast.error(`Error updating balances: ${error instanceof Error ? error.message : 'Network error'}`);
     } finally {
       setSaving(false);
     }
