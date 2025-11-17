@@ -47,8 +47,10 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
   });
   const [saving, setSaving] = useState(false);
 
-  const isCurrentUserAdmin = currentUser?.is_admin === true;
-  const canEditManagerRoles = isCurrentUserAdmin;
+  const isCurrentUserPureAdmin = currentUser?.is_admin === true &&
+                                  currentUser?.is_manager !== true &&
+                                  currentUser?.is_superiormanager !== true;
+  const canEditManagerRoles = isCurrentUserPureAdmin;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
