@@ -7,18 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Send, Activity, MessageSquare, FileBarChart, Building2, RefreshCw, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Send, Activity, MessageSquare, FileBarChart, RefreshCw, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
 import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
 import { UserEditDialog } from '@/components/user-edit-dialog';
-import { BalanceManager } from '@/components/balance-manager';
+import { UnifiedBalances } from '@/components/unified-balances';
 import { UserTaxesCard } from '@/components/user-taxes-card';
 import { UserMessagesCard } from '@/components/user-messages-card';
 import { UserActivitiesCard } from '@/components/user-activities-card';
 import { UserExternalAccountsCard } from '@/components/user-external-accounts-card';
 import { UserTransfersCard } from '@/components/user-transfers-card';
-import { UserCryptoTransactionsCard } from '@/components/user-crypto-transactions-card';
 import { UserCardsManagement } from '@/components/user-cards-management';
-import { UserTransactionHistoryCard } from '@/components/user-transaction-history-card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 
@@ -212,32 +210,32 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
       </div>
 
       <div className="max-w-[1800px] mx-auto px-6 py-6">
-        <div className="flex gap-4">
+        <div className="flex gap-4 min-h-[calc(100vh-8rem)]">
           <div className="w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border p-4 sticky top-20">
-              <div className="mb-3">
-                <Badge variant="secondary" className="text-xs px-2 py-1 mb-2">
+            <div className="bg-white rounded-lg shadow-sm border p-6 sticky top-20 h-[calc(100vh-6rem)]">
+              <div className="mb-4">
+                <Badge variant="secondary" className="text-sm px-3 py-1 mb-3">
                   {user.bank_name}
                 </Badge>
-                <h2 className="text-base font-bold text-gray-900 break-words mb-1">{user.email}</h2>
+                <h2 className="text-lg font-bold text-gray-900 break-words mb-1">{user.email}</h2>
               </div>
 
-              <Separator className="my-3" />
+              <Separator className="my-4" />
 
-              <div className="space-y-3 text-sm">
+              <div className="space-y-4">
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">User ID</div>
-                  <div className="text-xs font-mono text-gray-900 break-all">{user.id}</div>
+                  <div className="text-sm font-semibold text-gray-500 uppercase mb-2">User ID</div>
+                  <div className="text-sm font-mono text-gray-900 break-all">{user.id}</div>
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Password</div>
-                  <div className="text-sm text-gray-900">{user.password || 'Not set'}</div>
+                  <div className="text-sm font-semibold text-gray-500 uppercase mb-2">Password</div>
+                  <div className="text-base text-gray-900">{user.password || 'Not set'}</div>
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Location</div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm font-semibold text-gray-500 uppercase mb-2">Location</div>
+                  <div className="text-base text-gray-900">
                     {presence?.country ? (
                       <>{presence.city ? `${presence.city}, ` : ''}{presence.country}</>
                     ) : (
@@ -247,21 +245,21 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Roles</div>
-                  <div className="flex gap-1 flex-wrap">
-                    {user.is_admin && <Badge className="bg-blue-600 text-xs py-0">Admin</Badge>}
-                    {user.is_manager && <Badge variant="outline" className="text-xs py-0">Manager</Badge>}
-                    {user.is_superiormanager && <Badge variant="outline" className="text-xs py-0">Superior</Badge>}
+                  <div className="text-sm font-semibold text-gray-500 uppercase mb-2">Roles</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {user.is_admin && <Badge className="bg-blue-600 text-sm py-1">Admin</Badge>}
+                    {user.is_manager && <Badge variant="outline" className="text-sm py-1">Manager</Badge>}
+                    {user.is_superiormanager && <Badge variant="outline" className="text-sm py-1">Superior</Badge>}
                     {!user.is_admin && !user.is_manager && !user.is_superiormanager && (
-                      <span className="text-xs text-gray-500">None</span>
+                      <span className="text-sm text-gray-500">None</span>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-xs font-semibold text-gray-500 uppercase mb-1">KYC Status</div>
+                  <div className="text-sm font-semibold text-gray-500 uppercase mb-2">KYC Status</div>
                   <Badge
-                    className={`text-xs py-0 ${
+                    className={`text-sm py-1 ${
                       user.kyc_status === 'approved'
                         ? 'bg-green-100 text-green-800'
                         : user.kyc_status === 'pending'
@@ -283,7 +281,7 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
               <TabsList className="w-full bg-white border shadow-sm h-10 p-1 mb-4">
                 <TabsTrigger value="balances" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <Wallet className="w-3 h-3" />
-                  Balances
+                  Balances & Transactions & Taxes
                 </TabsTrigger>
                 <TabsTrigger value="cards" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <CreditCard className="w-3 h-3" />
@@ -301,17 +299,15 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                   <MessageSquare className="w-3 h-3" />
                   Messages
                 </TabsTrigger>
-                <TabsTrigger value="taxes" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                {/*<TabsTrigger value="taxes" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <FileBarChart className="w-3 h-3" />
                   Taxes
-                </TabsTrigger>
+                </TabsTrigger>*/}
               </TabsList>
 
               <TabsContent value="balances" className="space-y-4 mt-0">
-                <BalanceManager key={`balance-${refreshKey}`} bankKey={user.bank_key} userId={user.id} />
-                <UserTransactionHistoryCard key={`transaction-history-${refreshKey}`} user={user} />
+                <UnifiedBalances key={`balances-${refreshKey}`} user={user} />
                 <UserTaxesCard key={`taxes-${refreshKey}`} user={user} />
-                <UserCryptoTransactionsCard key={`crypto-transactions-${refreshKey}`} user={user} />
               </TabsContent>
 
               <TabsContent value="cards" className="space-y-4 mt-0">
