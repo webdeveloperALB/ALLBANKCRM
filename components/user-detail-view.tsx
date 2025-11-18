@@ -291,10 +291,10 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                   <Send className="w-3 h-3" />
                   External Accounts & Transfers
                 </TabsTrigger>
-                <TabsTrigger value="activity" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                {/*<TabsTrigger value="activity" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <Activity className="w-3 h-3" />
                   Activity
-                </TabsTrigger>
+                </TabsTrigger>*/}
                 <TabsTrigger value="messages" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <MessageSquare className="w-3 h-3" />
                   Messages
