@@ -289,7 +289,7 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                 </TabsTrigger>
                 <TabsTrigger value="transfers" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <Send className="w-3 h-3" />
-                  Transfers
+                  External Accounts & Transfers
                 </TabsTrigger>
                 <TabsTrigger value="activity" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <Activity className="w-3 h-3" />
