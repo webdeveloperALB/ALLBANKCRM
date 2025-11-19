@@ -56,10 +56,14 @@ export default function AdminLiveChatSimple() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(
+    null
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(new Set());
+  const [selectedSessionIds, setSelectedSessionIds] = useState<Set<string>>(
+    new Set()
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -94,11 +98,13 @@ export default function AdminLiveChatSimple() {
         }
 
         if (data && data.length > 0) {
-          console.log(`  ✅ Found ${data.length} sessions in ${bankConfig.name}`);
-          const sessionsWithBank = data.map(session => ({
+          console.log(
+            `  ✅ Found ${data.length} sessions in ${bankConfig.name}`
+          );
+          const sessionsWithBank = data.map((session) => ({
             ...session,
             bank_key: bankKey,
-            bank_name: bankConfig.name
+            bank_name: bankConfig.name,
           }));
           allSessions.push(...sessionsWithBank);
         } else {
@@ -106,8 +112,10 @@ export default function AdminLiveChatSimple() {
         }
       }
 
-      allSessions.sort((a, b) =>
-        new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+      allSessions.sort(
+        (a, b) =>
+          new Date(b.last_message_at).getTime() -
+          new Date(a.last_message_at).getTime()
       );
 
       console.log(`✅ Total: ${allSessions.length} sessions across all banks`);
@@ -124,7 +132,9 @@ export default function AdminLiveChatSimple() {
             .eq("sender_type", "client")
             .eq("read_by_admin", false);
 
-          console.log(`📊 [${session.bank_name}] "${session.client_name}": ${count} unread`);
+          console.log(
+            `📊 [${session.bank_name}] "${session.client_name}": ${count} unread`
+          );
 
           return {
             ...session,
@@ -186,7 +196,8 @@ export default function AdminLiveChatSimple() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedSession || !selectedSession.bank_key) return;
+    if (!newMessage.trim() || !selectedSession || !selectedSession.bank_key)
+      return;
 
     const messageText = newMessage.trim();
     setNewMessage("");
@@ -264,7 +275,11 @@ export default function AdminLiveChatSimple() {
   };
 
   const deleteSession = async (sessionId: string, bankKey: string) => {
-    if (!confirm("Are you sure you want to permanently delete this chat session? This cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to permanently delete this chat session? This cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -272,7 +287,9 @@ export default function AdminLiveChatSimple() {
       const bankConfig = BANKS[bankKey];
       const bankClient = createClient(bankConfig.url, bankConfig.anonKey);
 
-      console.log(`🗑️ Deleting session ${sessionId} from ${bankConfig.name}...`);
+      console.log(
+        `🗑️ Deleting session ${sessionId} from ${bankConfig.name}...`
+      );
 
       // First delete all messages
       const { error: msgError } = await bankClient
@@ -294,7 +311,8 @@ export default function AdminLiveChatSimple() {
 
       toast({
         title: "Session Deleted",
-        description: "Chat session and all messages have been permanently deleted",
+        description:
+          "Chat session and all messages have been permanently deleted",
       });
 
       fetchSessions();
@@ -324,7 +342,11 @@ export default function AdminLiveChatSimple() {
       return;
     }
 
-    if (!confirm(`Are you sure you want to permanently delete ${selectedSessionIds.size} chat session(s)? This cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete ${selectedSessionIds.size} chat session(s)? This cannot be undone.`
+      )
+    ) {
       return;
     }
 
@@ -332,14 +354,17 @@ export default function AdminLiveChatSimple() {
     let failCount = 0;
 
     for (const sessionId of Array.from(selectedSessionIds)) {
-      const session = sessions.find(s => s.id === sessionId);
+      const session = sessions.find((s) => s.id === sessionId);
       if (!session?.bank_key) continue;
 
       try {
         const bankConfig = BANKS[session.bank_key];
         const bankClient = createClient(bankConfig.url, bankConfig.anonKey);
 
-        await bankClient.from("chat_messages").delete().eq("session_id", sessionId);
+        await bankClient
+          .from("chat_messages")
+          .delete()
+          .eq("session_id", sessionId);
         await bankClient.from("chat_sessions").delete().eq("id", sessionId);
         successCount++;
       } catch (error) {
@@ -350,7 +375,10 @@ export default function AdminLiveChatSimple() {
 
     toast({
       title: `Deleted ${successCount} session(s)`,
-      description: failCount > 0 ? `${failCount} session(s) failed to delete` : "All selected sessions deleted successfully",
+      description:
+        failCount > 0
+          ? `${failCount} session(s) failed to delete`
+          : "All selected sessions deleted successfully",
       variant: failCount > 0 ? "destructive" : "default",
     });
 
@@ -377,7 +405,7 @@ export default function AdminLiveChatSimple() {
     if (selectedSessionIds.size === closedSessions.length) {
       setSelectedSessionIds(new Set());
     } else {
-      setSelectedSessionIds(new Set(closedSessions.map(s => s.id)));
+      setSelectedSessionIds(new Set(closedSessions.map((s) => s.id)));
     }
   };
 
@@ -453,9 +481,14 @@ export default function AdminLiveChatSimple() {
 
   const activeSessions = sessions.filter((s) => s.status === "active");
   const closedSessions = sessions.filter((s) => s.status === "closed");
-  const totalUnread = activeSessions.reduce((sum, s) => sum + (s.unread_count || 0), 0);
+  const totalUnread = activeSessions.reduce(
+    (sum, s) => sum + (s.unread_count || 0),
+    0
+  );
 
-  console.log(`🔢 Active: ${activeSessions.length}, Closed: ${closedSessions.length}, Total Unread: ${totalUnread}`);
+  console.log(
+    `🔢 Active: ${activeSessions.length}, Closed: ${closedSessions.length}, Total Unread: ${totalUnread}`
+  );
 
   if (!isOpen) {
     return (
@@ -480,7 +513,9 @@ export default function AdminLiveChatSimple() {
         <div className="p-3 bg-[#F26623] text-white flex items-center justify-between rounded-t-lg">
           <div className="flex items-center gap-2">
             <MessageCircle className="w-5 h-5" />
-            <span className="font-medium">Admin Chat ({activeSessions.length})</span>
+            <span className="font-medium">
+              Admin Chat ({activeSessions.length})
+            </span>
             {totalUnread > 0 && (
               <Badge className="bg-red-500 text-white">{totalUnread}</Badge>
             )}
@@ -518,7 +553,9 @@ export default function AdminLiveChatSimple() {
             {activeSessions.length} active
           </Badge>
           {totalUnread > 0 && (
-            <Badge className="bg-red-500 text-white">{totalUnread} unread</Badge>
+            <Badge className="bg-red-500 text-white">
+              {totalUnread} unread
+            </Badge>
           )}
         </div>
         <div className="flex gap-1">
@@ -529,7 +566,9 @@ export default function AdminLiveChatSimple() {
             disabled={isRefreshing}
             className="h-8 px-3 text-white hover:bg-[#E55A1F]"
           >
-            <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 mr-1 ${isRefreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button
@@ -553,8 +592,11 @@ export default function AdminLiveChatSimple() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-72 border-r flex flex-col bg-gray-50">
-          <Tabs defaultValue="active" className="flex flex-col flex-1">
-            <div className="p-3 border-b">
+          <Tabs
+            defaultValue="active"
+            className="flex flex-col flex-1 overflow-hidden"
+          >
+            <div className="p-3 border-b bg-gray-50 sticky top-0 z-10">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="active" className="text-xs">
                   Active ({activeSessions.length})
@@ -565,8 +607,8 @@ export default function AdminLiveChatSimple() {
               </TabsList>
             </div>
 
-            <TabsContent value="active" className="flex-1 m-0 overflow-hidden">
-              <ScrollArea className="h-[calc(100vh-300px)]">
+            <TabsContent value="active" className="flex-1 m-0">
+              <ScrollArea className="h-full">
                 {activeSessions.length === 0 ? (
                   <div className="p-4 text-center text-gray-500 text-sm">
                     No active chats
@@ -596,27 +638,33 @@ export default function AdminLiveChatSimple() {
                             </Badge>
                           )}
                         </div>
-                        <div className={`text-xs mb-1 ${
-                          selectedSession?.id === session.id
-                            ? "text-white/90 font-medium"
-                            : "text-[#F26623] font-semibold"
-                        }`}>
+                        <div
+                          className={`text-xs mb-1 ${
+                            selectedSession?.id === session.id
+                              ? "text-white/90 font-medium"
+                              : "text-[#F26623] font-semibold"
+                          }`}
+                        >
                           🏦 {session.bank_name}
                         </div>
                         {session.client_email && (
-                          <div className={`text-xs truncate ${
-                            selectedSession?.id === session.id
-                              ? "text-white/80"
-                              : "text-gray-500"
-                          }`}>
+                          <div
+                            className={`text-xs truncate ${
+                              selectedSession?.id === session.id
+                                ? "text-white/80"
+                                : "text-gray-500"
+                            }`}
+                          >
                             {session.client_email}
                           </div>
                         )}
-                        <div className={`text-xs mt-1 ${
-                          selectedSession?.id === session.id
-                            ? "text-white/70"
-                            : "text-gray-400"
-                        }`}>
+                        <div
+                          className={`text-xs mt-1 ${
+                            selectedSession?.id === session.id
+                              ? "text-white/70"
+                              : "text-gray-400"
+                          }`}
+                        >
                           {formatTime(session.last_message_at)}
                         </div>
                       </div>
@@ -626,17 +674,24 @@ export default function AdminLiveChatSimple() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="closed" className="flex-1 m-0 overflow-hidden">
+            <TabsContent value="closed" className="flex-1 m-0 flex flex-col">
               {closedSessions.length > 0 && (
-                <div className="p-2 border-b bg-gray-50 flex items-center justify-between">
+                <div className="p-2 border-b bg-gray-50 flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      checked={selectedSessionIds.size === closedSessions.length && closedSessions.length > 0}
+                      checked={
+                        selectedSessionIds.size === closedSessions.length &&
+                        closedSessions.length > 0
+                      }
                       onCheckedChange={() => toggleSelectAll(closedSessions)}
                       id="select-all"
                     />
-                    <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                      Select All ({selectedSessionIds.size}/{closedSessions.length})
+                    <label
+                      htmlFor="select-all"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Select All ({selectedSessionIds.size}/
+                      {closedSessions.length})
                     </label>
                   </div>
                   {selectedSessionIds.size > 0 && (
@@ -652,7 +707,7 @@ export default function AdminLiveChatSimple() {
                   )}
                 </div>
               )}
-              <ScrollArea className="h-[calc(100vh-300px)]">
+              <ScrollArea className="flex-1">
                 {closedSessions.length === 0 ? (
                   <div className="p-4 text-center text-gray-500 text-sm">
                     No closed chats
@@ -672,7 +727,9 @@ export default function AdminLiveChatSimple() {
                           <div className="flex items-center gap-2 min-w-0">
                             <Checkbox
                               checked={selectedSessionIds.has(session.id)}
-                              onCheckedChange={() => toggleSelectSession(session.id)}
+                              onCheckedChange={() =>
+                                toggleSelectSession(session.id)
+                              }
                               onClick={(e) => e.stopPropagation()}
                             />
                             <CheckCircle
@@ -770,7 +827,12 @@ export default function AdminLiveChatSimple() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteSession(selectedSession.id, selectedSession.bank_key!)}
+                      onClick={() =>
+                        deleteSession(
+                          selectedSession.id,
+                          selectedSession.bank_key!
+                        )
+                      }
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
@@ -798,21 +860,27 @@ export default function AdminLiveChatSimple() {
                             : "bg-white text-gray-900 border rounded-bl-sm"
                         }`}
                       >
-                        <div className={`text-xs mb-1 ${
-                          msg.sender_type === "admin"
-                            ? "text-white/70"
-                            : "text-gray-500"
-                        }`}>
-                          {msg.sender_type === "admin" ? "You" : msg.sender_name || "Client"}
+                        <div
+                          className={`text-xs mb-1 ${
+                            msg.sender_type === "admin"
+                              ? "text-white/70"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {msg.sender_type === "admin"
+                            ? "You"
+                            : msg.sender_name || "Client"}
                         </div>
                         <div className="text-sm leading-relaxed whitespace-pre-wrap">
                           {msg.message}
                         </div>
-                        <div className={`text-xs mt-2 ${
-                          msg.sender_type === "admin"
-                            ? "text-white/60"
-                            : "text-gray-400"
-                        }`}>
+                        <div
+                          className={`text-xs mt-2 ${
+                            msg.sender_type === "admin"
+                              ? "text-white/60"
+                              : "text-gray-400"
+                          }`}
+                        >
                           {formatTime(msg.created_at)}
                         </div>
                       </div>
