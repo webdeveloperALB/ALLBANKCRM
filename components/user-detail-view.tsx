@@ -212,7 +212,7 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
       <div className="max-w-[1800px] mx-auto px-6 py-6">
         <div className="flex gap-4 min-h-[calc(100vh-8rem)]">
           <div className="w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border p-6 sticky top-20 h-[calc(100vh-6rem)]">
+            <div className="bg-white rounded-lg shadow-sm border p-6 sticky top-20">
               <div className="mb-4">
                 <Badge variant="secondary" className="text-sm px-3 py-1 mb-3">
                   {user.bank_name}
