@@ -28,6 +28,7 @@ import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
 import { UserDetailView } from '@/components/user-detail-view';
 import { HierarchyManagement } from '@/components/hierarchy-management';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AdminLiveChatSimple from '@/components/admin-live-chat-simple';
 
 interface PaginationInfo {
   page: number;
@@ -485,6 +486,8 @@ export default function AdminPage() {
 
       </Tabs>
       </div>
+
+      <AdminLiveChatSimple />
     </div>
   );
 }
