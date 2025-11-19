@@ -48,7 +48,7 @@ export function UserMessagesCard({ user }: UserMessagesCardProps) {
 
   useEffect(() => {
     fetchMessages();
-  }, []);
+  }, [user.bank_key, user.id]);
 
   const fetchMessages = async () => {
     setLoading(true);

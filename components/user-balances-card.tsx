@@ -43,7 +43,7 @@ export function UserBalancesCard({ user }: UserBalancesCardProps) {
 
   useEffect(() => {
     fetchBalances();
-  }, []);
+  }, [user.bank_key, user.id]);
 
   const fetchBalances = async () => {
     setLoading(true);
@@ -51,7 +51,17 @@ export function UserBalancesCard({ user }: UserBalancesCardProps) {
       const response = await fetch(
         `/api/balances?bankKey=${user.bank_key}&userId=${user.id}`
       );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch balances');
+      }
+
       const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       setBalances(data);
 
       setEditData({
@@ -64,6 +74,7 @@ export function UserBalancesCard({ user }: UserBalancesCardProps) {
       });
     } catch (error) {
       console.error('Error fetching balances:', error);
+      toast.error('Failed to load balances. Please try again.');
     } finally {
       setLoading(false);
     }

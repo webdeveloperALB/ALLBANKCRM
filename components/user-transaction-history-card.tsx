@@ -42,7 +42,7 @@ export function UserTransactionHistoryCard({ user }: UserTransactionHistoryCardP
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [user.bank_key, user.id]);
 
   const fetchTransactions = async () => {
     try {

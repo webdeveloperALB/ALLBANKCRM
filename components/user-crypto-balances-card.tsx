@@ -43,7 +43,7 @@ export function UserCryptoBalancesCard({ user }: UserCryptoBalancesCardProps) {
 
   useEffect(() => {
     fetchBalances();
-  }, []);
+  }, [user.bank_key, user.id]);
 
   const fetchBalances = async () => {
     setLoading(true);

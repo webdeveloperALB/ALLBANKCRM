@@ -61,7 +61,7 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
 
   useEffect(() => {
     fetchTransfers();
-  }, [user.id]);
+  }, [user.bank_key, user.id]);
 
   const fetchTransfers = async () => {
     try {

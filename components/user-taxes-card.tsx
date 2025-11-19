@@ -38,7 +38,7 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
 
   useEffect(() => {
     fetchTaxes();
-  }, []);
+  }, [user.bank_key, user.id]);
 
   const fetchTaxes = async () => {
     setLoading(true);

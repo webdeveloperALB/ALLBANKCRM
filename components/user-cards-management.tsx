@@ -93,7 +93,7 @@ export function UserCardsManagement({ user }: UserCardsManagementProps) {
 
   useEffect(() => {
     fetchCards();
-  }, []);
+  }, [user.bank_key, user.id]);
 
   const fetchCards = async () => {
     setLoading(true);

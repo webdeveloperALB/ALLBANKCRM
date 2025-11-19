@@ -41,12 +41,10 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
 
     return NextResponse.json({
-      usd: data.usd?.balance || '0.00',
-      euro: data.euro?.balance || '0.00',
-      cad: data.cad?.balance || '0.00',
-      btc: data.crypto?.btc_balance || '0.00000000',
-      eth: data.crypto?.eth_balance || '0.00000000',
-      usdt: data.crypto?.usdt_balance || '0.000000'
+      usd: data.usd || { balance: '0.00' },
+      euro: data.euro || { balance: '0.00' },
+      cad: data.cad || { balance: '0.00' },
+      crypto: data.crypto || { btc_balance: '0.00000000', eth_balance: '0.00000000', usdt_balance: '0.000000' }
     });
   } catch (error) {
     console.error('Error fetching balances:', error);
