@@ -87,11 +87,24 @@ export default function LiveChatClient({
     }
 
     try {
+      let clientUserId = null;
+
+      const { data: user } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", clientEmail.trim())
+        .maybeSingle();
+
+      if (user) {
+        clientUserId = user.id;
+      }
+
       const { data, error } = await supabase
         .from("chat_sessions")
         .insert({
           client_name: clientName.trim(),
           client_email: clientEmail.trim(),
+          client_user_id: clientUserId,
           status: "active",
         })
         .select()

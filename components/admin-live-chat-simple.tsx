@@ -24,6 +24,7 @@ import { BANKS } from "@/lib/bank-config";
 import { createClient } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
+import { getAccessibleUserIds } from "@/lib/hierarchy-utils";
 
 interface ChatMessage {
   id: string;
@@ -76,72 +77,76 @@ export default function AdminLiveChatSimple() {
 
   const fetchSessions = async () => {
     try {
-      console.log("📋 Fetching chat sessions from all 3 banks...");
-
       if (!user) {
-        console.warn("⚠️ No user logged in");
+        console.log("⚠️ No user found, cannot fetch sessions");
         return;
       }
 
-      const allSessions: ChatSession[] = [];
+      console.log("📋 Fetching chat sessions from all 3 banks...");
+      console.log(`👤 User: ${user.email}, ID: ${user.id}, Bank: ${user.bank_key}`);
+      console.log(`   Roles - Admin: ${user.is_admin}, Manager: ${user.is_manager}, Superior: ${user.is_superiormanager}`);
 
-      // Determine if user is a manager or superior manager (not full admin)
-      const isManager = user.is_manager && !user.is_superiormanager;
-      const isSuperiorManager = user.is_superiormanager;
-      const isFullAdmin = user.is_admin && !user.is_manager && !user.is_superiormanager;
-
-      // Get accessible users if manager or superior manager
-      let accessibleUserIds: string[] = [];
-      if ((isManager || isSuperiorManager) && user.bank_key) {
-        console.log(`🔐 User role: ${isSuperiorManager ? 'Superior Manager' : 'Manager'}`);
-        const bankConfig = BANKS[user.bank_key];
-        const userBankClient = createClient(bankConfig.url, bankConfig.anonKey);
-
-        const { data: accessibleUsers, error: hierarchyError } = await userBankClient
-          .rpc('get_accessible_users', { user_id: user.id });
-
-        if (hierarchyError) {
-          console.error("❌ Error fetching accessible users:", hierarchyError);
-        } else if (accessibleUsers) {
-          accessibleUserIds = accessibleUsers.map((u: any) => u.accessible_user_id);
-          console.log(`👥 User can access ${accessibleUserIds.length} users`);
-        }
+      if (!user.bank_key) {
+        console.error("❌ User has no bank_key");
+        setSessions([]);
+        return;
       }
 
+      console.log(`🔍 Getting hierarchy via API for bank: ${user.bank_key}`);
+      // Call API to get accessible user IDs from user's bank (bypasses RLS using service role)
+      const hierarchyResponse = await fetch(
+        `/api/chat/accessible-user-ids?user_id=${user.id}&bank_key=${user.bank_key}&is_admin=${user.is_admin}&is_manager=${user.is_manager}&is_superiormanager=${user.is_superiormanager}`
+      );
+
+      if (!hierarchyResponse.ok) {
+        console.error('Failed to fetch accessible user IDs');
+        setSessions([]);
+        return;
+      }
+
+      const { accessibleUserIds } = await hierarchyResponse.json();
+      console.log(`✅ User has access to ${accessibleUserIds.length > 0 ? accessibleUserIds.length : 'NO'} users:`, accessibleUserIds);
+
+      let allSessions: ChatSession[] = [];
+
+      // Query each bank's database for chat sessions
       for (const [bankKey, bankConfig] of Object.entries(BANKS)) {
-        console.log(`  🏦 Checking ${bankConfig.name}...`);
+        console.log(`\n  🏦 Checking ${bankConfig.name} for chat sessions...`);
         const bankClient = createClient(bankConfig.url, bankConfig.anonKey);
 
-        let query = bankClient
-          .from("chat_sessions")
-          .select("*")
-          .order("last_message_at", { ascending: false });
+        let data: any[] = [];
 
-        // Apply filters based on role
-        if (isFullAdmin) {
-          // Full admin sees everything from all banks
-          console.log(`  👑 Full admin - showing all sessions`);
-        } else if (isManager || isSuperiorManager) {
-          // Manager/Superior Manager only sees their bank
-          if (bankKey !== user.bank_key) {
-            console.log(`  ⏭️ Skipping ${bankConfig.name} (different bank)`);
+        // If admin (pure admin without manager role), get all sessions from this bank
+        if (accessibleUserIds.includes('*')) {
+          console.log(`  ✅ Admin access - fetching ALL sessions from ${bankConfig.name}`);
+          const { data: allData, error } = await bankClient
+            .from("chat_sessions")
+            .select("*")
+            .order("last_message_at", { ascending: false });
+
+          if (error) {
+            console.error(`  ❌ Error from ${bankConfig.name}:`, error);
             continue;
           }
+          data = allData || [];
+        } else if (accessibleUserIds.length > 0) {
+          // Manager or Superior Manager - filter by accessible user IDs
+          console.log(`  🔐 Manager/Superior access - filtering ${bankConfig.name} by ${accessibleUserIds.length} accessible users`);
 
-          // Filter by accessible users
-          if (accessibleUserIds.length > 0) {
-            console.log(`  🔍 Filtering to ${accessibleUserIds.length} accessible users`);
-            query = query.in('client_user_id', accessibleUserIds);
-          } else {
-            console.log(`  ⚠️ No accessible users found - showing no sessions`);
+          const { data: filteredData, error } = await bankClient
+            .from("chat_sessions")
+            .select("*")
+            .in("client_user_id", accessibleUserIds)
+            .order("last_message_at", { ascending: false });
+
+          if (error) {
+            console.error(`  ❌ Error from ${bankConfig.name}:`, error);
             continue;
           }
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error(`  ❌ Error from ${bankConfig.name}:`, error);
+          data = filteredData || [];
+          console.log(`  📊 Found ${data.length} matching sessions in ${bankConfig.name}`);
+        } else {
+          console.log(`  ⚠️ No accessible users - skipping ${bankConfig.name}`);
           continue;
         }
 
@@ -510,6 +515,11 @@ export default function AdminLiveChatSimple() {
   const totalUnread = activeSessions.reduce((sum, s) => sum + (s.unread_count || 0), 0);
 
   console.log(`🔢 Active: ${activeSessions.length}, Closed: ${closedSessions.length}, Total Unread: ${totalUnread}`);
+
+  // Don't show the chat if there's no authenticated user
+  if (!user) {
+    return null;
+  }
 
   if (!isOpen) {
     return (
