@@ -75,55 +75,25 @@ Deno.serve(async (req: Request) => {
     const onHoldValue = on_hold || '0.00';
     const paidValue = paid || '0.00';
 
-    // Use RPC to execute raw SQL that explicitly sets timestamps
-    const { data: rpcData, error: rpcError } = await client.rpc('exec_sql', {
-      query: `
-        INSERT INTO taxes (user_id, taxes, on_hold, paid, created_at, updated_at)
-        VALUES ('${userId}', ${taxesValue}, ${onHoldValue}, ${paidValue}, '${createdAtValue}', '${updatedAtValue}')
-        ON CONFLICT (user_id)
-        DO UPDATE SET
-          taxes = ${taxesValue},
-          on_hold = ${onHoldValue},
-          paid = ${paidValue},
-          created_at = '${createdAtValue}',
-          updated_at = '${updatedAtValue}'
-        RETURNING *
-      `
-    });
+    const { data, error } = await client
+      .from('taxes')
+      .upsert({
+        user_id: userId,
+        taxes: taxesValue,
+        on_hold: onHoldValue,
+        paid: paidValue,
+        created_at: createdAtValue,
+        updated_at: updatedAtValue
+      }, { onConflict: 'user_id' })
+      .select()
+      .single();
 
-    if (rpcError) {
-      console.error('RPC error:', rpcError);
-      // Fallback: use direct update without trigger bypass
-      const { data, error } = await client
-        .from('taxes')
-        .upsert({
-          user_id: userId,
-          taxes: taxesValue,
-          on_hold: onHoldValue,
-          paid: paidValue,
-          created_at: createdAtValue,
-          updated_at: updatedAtValue
-        }, { onConflict: 'user_id' })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating taxes:', error);
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          {
-            status: 500,
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-      }
-
+    if (error) {
+      console.error('Error updating taxes:', error);
       return new Response(
-        JSON.stringify(data),
+        JSON.stringify({ error: error.message }),
         {
+          status: 500,
           headers: {
             ...corsHeaders,
             'Content-Type': 'application/json',
@@ -133,7 +103,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify(rpcData),
+      JSON.stringify(data),
       {
         headers: {
           ...corsHeaders,
