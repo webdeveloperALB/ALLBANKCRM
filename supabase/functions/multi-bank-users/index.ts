@@ -86,7 +86,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const perBankLimit = Math.ceil(perPage / 3);
+    // First, get total counts from all banks
+    const bankCounts: Record<string, number> = {};
 
     for (const [key, config] of Object.entries(BANKS)) {
       if (bankFilter !== 'all' && key !== bankFilter) {
@@ -100,16 +101,70 @@ Deno.serve(async (req: Request) => {
         }
       });
 
-      let query = client
+      let countQuery = client
         .from('users')
-        .select('*', { count: 'exact' });
+        .select('*', { count: 'exact', head: true });
 
       if (shouldApplyHierarchy) {
         if (key === userBankKey && accessibleUserIds.length > 0) {
-          console.log(`Filtering users in ${key} to accessible IDs:`, accessibleUserIds);
+          countQuery = countQuery.in('id', accessibleUserIds);
+        } else {
+          continue;
+        }
+      }
+
+      if (kycFilter !== 'all') {
+        countQuery = countQuery.eq('kyc_status', kycFilter);
+      }
+
+      if (search) {
+        countQuery = countQuery.or(`email.ilike.%${search}%,full_name.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
+      }
+
+      const { count } = await countQuery;
+      bankCounts[key] = count || 0;
+    }
+
+    const totalCount = Object.values(bankCounts).reduce((sum, count) => sum + count, 0);
+    const totalPages = Math.ceil(totalCount / perPage);
+
+    // Now fetch the actual page of data
+    const globalOffset = (page - 1) * perPage;
+    let itemsCollected = 0;
+    let currentOffset = 0;
+
+    for (const [key, config] of Object.entries(BANKS)) {
+      if (bankFilter !== 'all' && key !== bankFilter) {
+        continue;
+      }
+
+      if (itemsCollected >= perPage) {
+        break;
+      }
+
+      const bankTotalCount = bankCounts[key] || 0;
+
+      // Skip this bank if we haven't reached the offset yet
+      if (currentOffset + bankTotalCount <= globalOffset) {
+        currentOffset += bankTotalCount;
+        continue;
+      }
+
+      const client = createClient(config.url, config.serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+
+      let query = client
+        .from('users')
+        .select('*');
+
+      if (shouldApplyHierarchy) {
+        if (key === userBankKey && accessibleUserIds.length > 0) {
           query = query.in('id', accessibleUserIds);
         } else {
-          console.log(`Skipping bank ${key} for manager/superior manager`);
           continue;
         }
       }
@@ -122,13 +177,17 @@ Deno.serve(async (req: Request) => {
         query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       }
 
-      const offset = (page - 1) * perBankLimit;
-      const { data, error, count } = await query
+      // Calculate offset within this bank
+      const bankOffset = Math.max(0, globalOffset - currentOffset);
+      const itemsNeeded = perPage - itemsCollected;
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
-        .range(offset, offset + perBankLimit - 1);
+        .range(bankOffset, bankOffset + itemsNeeded - 1);
 
       if (error) {
         console.error(`Error fetching users from ${config.name}:`, error);
+        currentOffset += bankTotalCount;
         continue;
       }
 
@@ -137,17 +196,13 @@ Deno.serve(async (req: Request) => {
           ...user,
           bank_key: key,
           bank_name: config.name,
-          bank_total_count: count || 0
         }));
         allUsers.push(...usersWithBank);
+        itemsCollected += data.length;
       }
+
+      currentOffset += bankTotalCount;
     }
-
-    const totalCount = allUsers.reduce((sum, user) => {
-      return sum + (user.bank_total_count || 0);
-    }, 0);
-
-    const totalPages = Math.ceil(totalCount / perPage);
 
     return new Response(
       JSON.stringify({
