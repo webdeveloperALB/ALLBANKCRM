@@ -243,7 +243,7 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
 
               {!canEditManagerRoles && (
                 <p className="text-sm text-muted-foreground">
-                  You don't have permission to edit user roles.
+                  You do not have permission to edit user roles.
                 </p>
               )}
             </div>
