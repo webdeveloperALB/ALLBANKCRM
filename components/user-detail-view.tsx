@@ -315,9 +315,9 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
               </TabsContent>
 
               <TabsContent value="transfers" className="space-y-4 mt-0">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <UserExternalAccountsCard key={`external-accounts-${refreshKey}`} user={user} />
+                <div className="space-y-4">
                   <UserTransfersCard key={`transfers-${refreshKey}`} user={user} />
+                  <UserExternalAccountsCard key={`external-accounts-${refreshKey}`} user={user} />
                 </div>
               </TabsContent>
 
