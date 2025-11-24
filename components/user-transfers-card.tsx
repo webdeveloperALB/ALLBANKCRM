@@ -300,23 +300,28 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
   };
 
   const getStatusBadge = (status: TransferStatus) => {
-    const variants: Record<TransferStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    const normalizedStatus = status.toLowerCase() as 'completed' | 'pending' | 'failed' | 'cancelled';
+    const variants: Record<'completed' | 'pending' | 'failed' | 'cancelled', 'default' | 'secondary' | 'destructive' | 'outline'> = {
       completed: 'default',
       pending: 'secondary',
       failed: 'destructive',
       cancelled: 'outline',
     };
-    return <Badge variant={variants[status]}>{status.toUpperCase()}</Badge>;
+    return <Badge variant={variants[normalizedStatus] || 'secondary'}>{status.toUpperCase()}</Badge>;
   };
 
   const getTransferTypeIcon = (type: TransferType) => {
     switch (type) {
       case 'bank':
+      case 'bank_transfer':
         return <Building2 className="h-4 w-4" />;
       case 'internal':
+      case 'admin_balance_adjustment':
         return <ArrowLeftRight className="h-4 w-4" />;
       case 'crypto':
         return <Receipt className="h-4 w-4" />;
+      default:
+        return <ArrowLeftRight className="h-4 w-4" />;
     }
   };
 
@@ -340,44 +345,15 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
           <div className="space-y-3">
             {transfers.map((transfer) => (
               <div key={transfer.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      {getTransferTypeIcon(transfer.transfer_type)}
-                      <span className="font-medium text-sm capitalize">{transfer.transfer_type} Transfer</span>
-                      {getStatusBadge(transfer.status)}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                      <div>
-                        <span className="text-gray-500">From:</span> {transfer.from_amount} {transfer.from_currency}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">To:</span> {transfer.to_amount} {transfer.to_currency}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Fee:</span> {transfer.fee_amount}
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Rate:</span> {transfer.exchange_rate}
-                      </div>
-                    </div>
-
-                    {transfer.description && (
-                      <p className="text-xs text-gray-600">{transfer.description}</p>
-                    )}
-
-                    {transfer.reference_number && (
-                      <p className="text-xs text-gray-500">Ref: {transfer.reference_number}</p>
-                    )}
-
-                    <p className="text-xs text-gray-400">
-                      {format(new Date(transfer.created_at), 'MMM dd, yyyy HH:mm')}
-                    </p>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {getTransferTypeIcon(transfer.transfer_type)}
+                    <span className="font-medium text-sm capitalize">{transfer.transfer_type} Transfer</span>
+                    {getStatusBadge(transfer.status)}
                   </div>
 
-                  <div className="flex items-center gap-1 ml-2">
-                    {transfer.transfer_type === 'bank' && (
+                  <div className="flex items-center gap-1">
+                    {(transfer.transfer_type === 'bank' || transfer.transfer_type === 'bank_transfer') && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -401,6 +377,102 @@ export function UserTransfersCard({ user }: UserTransfersCardProps) {
                       <Trash2 className="h-4 w-4 text-red-600" />
                     </Button>
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <span className="text-gray-500 font-medium">From:</span> {transfer.from_amount} {transfer.from_currency}
+                    </div>
+                    <div>
+                      <span className="text-gray-500 font-medium">To:</span> {transfer.to_amount} {transfer.to_currency}
+                    </div>
+                    <div>
+                      <span className="text-gray-500 font-medium">Fee:</span> {transfer.fee_amount}
+                    </div>
+                    <div>
+                      <span className="text-gray-500 font-medium">Rate:</span> {transfer.exchange_rate}
+                    </div>
+                  </div>
+
+                  {transfer.description && (
+                    <p className="text-xs text-gray-600 bg-gray-100 p-2 rounded">{transfer.description}</p>
+                  )}
+
+                  {transfer.reference_number && (
+                    <p className="text-xs text-gray-500">
+                      <span className="font-medium">Reference:</span> {transfer.reference_number}
+                    </p>
+                  )}
+
+                  {(transfer.transfer_type === 'bank' || transfer.transfer_type === 'bank_transfer') && transfer.bank_details && (
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Building2 className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-semibold text-blue-900">Bank Transfer Details</span>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                          <div>
+                            <span className="text-gray-600 font-medium">Bank Name:</span>
+                            <p className="text-gray-900 mt-0.5">{transfer.bank_details.bank_name}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 font-medium">Account Holder:</span>
+                            <p className="text-gray-900 mt-0.5">{transfer.bank_details.account_holder_name}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 font-medium">Account Number:</span>
+                            <p className="text-gray-900 mt-0.5 font-mono">{transfer.bank_details.account_number}</p>
+                          </div>
+                          {transfer.bank_details.routing_number && (
+                            <div>
+                              <span className="text-gray-600 font-medium">Routing Number:</span>
+                              <p className="text-gray-900 mt-0.5 font-mono">{transfer.bank_details.routing_number}</p>
+                            </div>
+                          )}
+                          {transfer.bank_details.swift_code && (
+                            <div>
+                              <span className="text-gray-600 font-medium">SWIFT Code:</span>
+                              <p className="text-gray-900 mt-0.5 font-mono">{transfer.bank_details.swift_code}</p>
+                            </div>
+                          )}
+                          {transfer.bank_details.iban && (
+                            <div>
+                              <span className="text-gray-600 font-medium">IBAN:</span>
+                              <p className="text-gray-900 mt-0.5 font-mono break-all">{transfer.bank_details.iban}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {transfer.bank_details.bank_address && (
+                          <div className="pt-2 border-t border-blue-200">
+                            <span className="text-gray-600 font-medium text-xs">Bank Address:</span>
+                            <p className="text-gray-900 mt-0.5 text-xs">{transfer.bank_details.bank_address}</p>
+                          </div>
+                        )}
+
+                        {transfer.bank_details.recipient_address && (
+                          <div className="pt-2 border-t border-blue-200">
+                            <span className="text-gray-600 font-medium text-xs">Recipient Address:</span>
+                            <p className="text-gray-900 mt-0.5 text-xs">{transfer.bank_details.recipient_address}</p>
+                          </div>
+                        )}
+
+                        {transfer.bank_details.purpose_of_transfer && (
+                          <div className="pt-2 border-t border-blue-200">
+                            <span className="text-gray-600 font-medium text-xs">Purpose:</span>
+                            <p className="text-gray-900 mt-0.5 text-xs">{transfer.bank_details.purpose_of_transfer}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-400 pt-2 border-t">
+                    Created: {format(new Date(transfer.created_at), 'MMM dd, yyyy HH:mm')}
+                    {transfer.processed_at && ` • Processed: ${format(new Date(transfer.processed_at), 'MMM dd, yyyy HH:mm')}`}
+                  </p>
                 </div>
               </div>
             ))}

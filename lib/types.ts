@@ -131,11 +131,11 @@ export interface ExternalAccount {
   created_at: string;
 }
 
-export type TransferStatus = 'pending' | 'completed' | 'failed' | 'cancelled';
-export type TransferType = 'internal' | 'bank' | 'crypto';
+export type TransferStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'Pending' | 'Completed' | 'Failed' | 'Cancelled';
+export type TransferType = 'internal' | 'bank' | 'crypto' | 'bank_transfer' | 'admin_balance_adjustment';
 
 export interface Transfer {
-  id: number;
+  id: number | string;
   user_id: string;
   client_id: string | null;
   from_currency: string;
@@ -154,7 +154,7 @@ export interface Transfer {
 
 export interface BankTransfer {
   id: string;
-  transfer_id: number | null;
+  transfer_id: number | string | null;
   bank_name: string;
   account_holder_name: string;
   account_number: string;
