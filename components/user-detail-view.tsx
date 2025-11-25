@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Send, Activity, MessageSquare, FileBarChart, RefreshCw, Trash2, Pencil, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, FileText, Circle, Wallet, CreditCard, Send, Activity, MessageSquare, FileBarChart, RefreshCw, Trash2, Pencil, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 import { KYCDocumentsDialog } from '@/components/kyc-documents-dialog';
 import { UserEditDialog } from '@/components/user-edit-dialog';
 import { UnifiedBalances } from '@/components/unified-balances';
@@ -17,6 +17,7 @@ import { UserActivitiesCard } from '@/components/user-activities-card';
 import { UserExternalAccountsCard } from '@/components/user-external-accounts-card';
 import { UserTransfersCard } from '@/components/user-transfers-card';
 import { UserCardsManagement } from '@/components/user-cards-management';
+import { UserAccountFundingCard } from '@/components/user-account-funding-card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 
@@ -291,6 +292,10 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                   <Send className="w-3 h-3" />
                   External Accounts & Transfers
                 </TabsTrigger>
+                <TabsTrigger value="funding" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <DollarSign className="w-3 h-3" />
+                  Account Funding
+                </TabsTrigger>
                 {/*<TabsTrigger value="activity" className="gap-1 text-xs data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
                   <Activity className="w-3 h-3" />
                   Activity
@@ -319,6 +324,10 @@ export function UserDetailView({ user, onBack, onUpdate }: UserDetailViewProps) 
                   <UserTransfersCard key={`transfers-${refreshKey}`} user={user} />
                   <UserExternalAccountsCard key={`external-accounts-${refreshKey}`} user={user} />
                 </div>
+              </TabsContent>
+
+              <TabsContent value="funding" className="space-y-4 mt-0">
+                <UserAccountFundingCard key={`funding-${refreshKey}`} user={user} />
               </TabsContent>
 
               <TabsContent value="activity" className="space-y-4 mt-0">
