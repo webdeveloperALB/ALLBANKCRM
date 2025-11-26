@@ -9,11 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, DollarSign, Loader2, Building2, Bitcoin, CheckCircle, XCircle, Clock, Edit2, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, Loader2, Building2, Bitcoin, CheckCircle, XCircle, Clock, Edit2, Trash2, Wallet } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 
 interface UserAccountFundingCardProps {
@@ -51,24 +50,57 @@ interface UserBankDetails {
   updated_at: string;
 }
 
+interface CryptoWallet {
+  id: string;
+  user_id: string;
+  crypto_type: 'bitcoin' | 'ethereum' | 'usdt_erc20' | 'usdt_trc20';
+  wallet_address: string;
+  label: string;
+  symbol: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+const CRYPTO_TYPES = [
+  { value: 'bitcoin', label: 'Bitcoin', symbol: 'BTC' },
+  { value: 'ethereum', label: 'Ethereum', symbol: 'ETH' },
+  { value: 'usdt_erc20', label: 'USDT (ERC20)', symbol: 'USDT' },
+  { value: 'usdt_trc20', label: 'USDT (TRC20)', symbol: 'USDT' },
+];
+
 export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
   const [fundingRequests, setFundingRequests] = useState<FundAccount[]>([]);
   const [bankDetails, setBankDetails] = useState<UserBankDetails | null>(null);
+  const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const [selectedRequest, setSelectedRequest] = useState<FundAccount | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<CryptoWallet | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isBankDetailsDialogOpen, setIsBankDetailsDialogOpen] = useState(false);
+  const [isCryptoWalletsDialogOpen, setIsCryptoWalletsDialogOpen] = useState(false);
+  const [isAddWalletDialogOpen, setIsAddWalletDialogOpen] = useState(false);
+  const [isEditWalletDialogOpen, setIsEditWalletDialogOpen] = useState(false);
+  const [isDeleteWalletDialogOpen, setIsDeleteWalletDialogOpen] = useState(false);
 
   const [bankDetailsForm, setBankDetailsForm] = useState({
     beneficiary: '',
     iban: '',
     bic: '',
     bank_name: '',
+  });
+
+  const [walletForm, setWalletForm] = useState({
+    crypto_type: 'bitcoin' as CryptoWallet['crypto_type'],
+    wallet_address: '',
+    label: 'Bitcoin',
+    symbol: 'BTC',
+    is_active: true,
   });
 
   useEffect(() => {
@@ -78,7 +110,7 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchFundingRequests(), fetchBankDetails()]);
+      await Promise.all([fetchFundingRequests(), fetchBankDetails(), fetchCryptoWallets()]);
     } finally {
       setLoading(false);
     }
@@ -114,6 +146,31 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
     } catch (err) {
       console.error('Error fetching bank details:', err);
     }
+  };
+
+  const fetchCryptoWallets = async () => {
+    try {
+      const response = await fetch(`/api/crypto-wallets?user_id=${user.id}&bank_key=${user.bank_key}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCryptoWallets(data);
+      }
+    } catch (err) {
+      console.error('Error fetching crypto wallets:', err);
+    }
+  };
+
+  const getDefaultWallets = async () => {
+    try {
+      const response = await fetch(`/api/crypto-wallets?user_id=null&bank_key=${user.bank_key}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (err) {
+      console.error('Error fetching default wallets:', err);
+    }
+    return [];
   };
 
   const handleUpdateStatus = async (newStatus: 'pending' | 'success') => {
@@ -220,6 +277,172 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
     }
   };
 
+  const resetWalletForm = () => {
+    setWalletForm({
+      crypto_type: 'bitcoin',
+      wallet_address: '',
+      label: 'Bitcoin',
+      symbol: 'BTC',
+      is_active: true,
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const openAddWalletDialog = () => {
+    resetWalletForm();
+    setIsAddWalletDialogOpen(true);
+  };
+
+  const openEditWalletDialog = async (wallet: CryptoWallet) => {
+    setSelectedWallet(wallet);
+
+    const defaultWallets = await getDefaultWallets();
+    const defaultWallet = defaultWallets.find((w: CryptoWallet) => w.crypto_type === wallet.crypto_type);
+
+    setWalletForm({
+      crypto_type: wallet.crypto_type,
+      wallet_address: wallet.wallet_address || (defaultWallet?.wallet_address || ''),
+      label: wallet.label || (defaultWallet?.label || wallet.crypto_type),
+      symbol: wallet.symbol || (defaultWallet?.symbol || ''),
+      is_active: wallet.is_active,
+    });
+    setError('');
+    setSuccess('');
+    setIsEditWalletDialogOpen(true);
+  };
+
+  const openDeleteWalletDialog = (wallet: CryptoWallet) => {
+    setSelectedWallet(wallet);
+    setIsDeleteWalletDialogOpen(true);
+  };
+
+  const handleCryptoTypeChange = (value: string) => {
+    const cryptoType = CRYPTO_TYPES.find(t => t.value === value);
+    if (cryptoType) {
+      setWalletForm({
+        ...walletForm,
+        crypto_type: value as CryptoWallet['crypto_type'],
+        symbol: cryptoType.symbol,
+        label: cryptoType.label,
+      });
+    }
+  };
+
+  const handleAddWallet = async () => {
+    if (!walletForm.wallet_address.trim() || !walletForm.label.trim()) {
+      setError('Wallet address and label are required');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/crypto-wallets/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          bank_key: user.bank_key,
+          ...walletForm,
+        }),
+      });
+
+      if (response.ok) {
+        setSuccess('Wallet added successfully');
+        fetchCryptoWallets();
+        setTimeout(() => {
+          setIsAddWalletDialogOpen(false);
+          setSuccess('');
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to add wallet');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateWallet = async () => {
+    if (!selectedWallet || !walletForm.wallet_address.trim() || !walletForm.label.trim()) {
+      setError('Wallet address and label are required');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/crypto-wallets/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_id: selectedWallet.id,
+          user_id: user.id,
+          bank_key: user.bank_key,
+          ...walletForm,
+        }),
+      });
+
+      if (response.ok) {
+        setSuccess('Wallet updated successfully');
+        fetchCryptoWallets();
+        setTimeout(() => {
+          setIsEditWalletDialogOpen(false);
+          setSuccess('');
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to update wallet');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteWallet = async () => {
+    if (!selectedWallet) return;
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/crypto-wallets/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_id: selectedWallet.id,
+          user_id: user.id,
+          bank_key: user.bank_key,
+        }),
+      });
+
+      if (response.ok) {
+        setSuccess('Wallet deleted successfully');
+        fetchCryptoWallets();
+        setTimeout(() => {
+          setIsDeleteWalletDialogOpen(false);
+          setSuccess('');
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete wallet');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const openStatusDialog = (request: FundAccount) => {
     setSelectedRequest(request);
     setIsStatusDialogOpen(true);
@@ -242,6 +465,12 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
     setIsBankDetailsDialogOpen(true);
   };
 
+  const openCryptoWalletsDialog = () => {
+    setError('');
+    setSuccess('');
+    setIsCryptoWalletsDialogOpen(true);
+  };
+
   const getStatusBadge = (status: 'pending' | 'success') => {
     if (status === 'success') {
       return <Badge variant="default" className="bg-green-600"><CheckCircle className="h-3 w-3 mr-1" />Success</Badge>;
@@ -256,23 +485,37 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
     return <Building2 className="h-4 w-4 text-blue-600" />;
   };
 
+  const getCryptoTypeLabel = (type: string) => {
+    return CRYPTO_TYPES.find(t => t.value === type)?.label || type;
+  };
+
+  const getCryptoIcon = (type: string) => {
+    const colors: Record<string, string> = {
+      bitcoin: 'text-orange-500',
+      ethereum: 'text-blue-500',
+      usdt_erc20: 'text-green-500',
+      usdt_trc20: 'text-teal-500',
+    };
+    return <Bitcoin className={`h-5 w-5 ${colors[type] || 'text-gray-500'}`} />;
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Account Funding</CardTitle>
-        <Button onClick={openBankDetailsDialog} size="sm" variant="outline">
-          <Building2 className="h-4 w-4 mr-1" />
-          Edit Bank Details
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={openBankDetailsDialog} size="sm" variant="outline">
+            <Building2 className="h-4 w-4 mr-1" />
+            Edit Bank Details
+          </Button>
+          <Button onClick={openCryptoWalletsDialog} size="sm" variant="outline">
+            <Wallet className="h-4 w-4 mr-1" />
+            Edit Crypto Wallets
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="requests">Funding Requests</TabsTrigger>
-            <TabsTrigger value="bank-info">Bank Information</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="requests" className="mt-4">
+        <div className="mt-4">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -391,54 +634,7 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
                 ))}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="bank-info" className="mt-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              </div>
-            ) : bankDetails ? (
-              <div className="bg-blue-50 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                  <span className="font-semibold text-blue-900">User Bank Details</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs text-gray-600">Beneficiary</Label>
-                    <p className="text-sm font-medium text-gray-900 mt-1">{bankDetails.beneficiary}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">Bank Name</Label>
-                    <p className="text-sm font-medium text-gray-900 mt-1">{bankDetails.bank_name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">IBAN</Label>
-                    <p className="text-sm font-medium text-gray-900 mt-1 font-mono">{bankDetails.iban}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-gray-600">BIC/SWIFT</Label>
-                    <p className="text-sm font-medium text-gray-900 mt-1 font-mono">{bankDetails.bic}</p>
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-blue-200">
-                  <p className="text-xs text-gray-500">
-                    Last updated: {format(new Date(bankDetails.updated_at), 'MMM dd, yyyy HH:mm')}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500 mb-4">No bank details configured</p>
-                <Button onClick={openBankDetailsDialog} size="sm">
-                  Add Bank Details
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        </div>
       </CardContent>
 
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
@@ -580,6 +776,289 @@ export function UserAccountFundingCard({ user }: UserAccountFundingCardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isCryptoWalletsDialogOpen} onOpenChange={setIsCryptoWalletsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Crypto Wallets</DialogTitle>
+            <DialogDescription>
+              View and manage cryptocurrency wallet addresses for this user
+            </DialogDescription>
+          </DialogHeader>
+
+          {error && (
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4 py-4">
+            {cryptoWallets.length === 0 ? (
+              <div className="text-center py-8">
+                <Wallet className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 mb-4">No crypto wallets configured</p>
+                <Button onClick={openAddWalletDialog} size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create New and Edit Wallet
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <Button onClick={openAddWalletDialog} size="sm">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Wallet
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {cryptoWallets.map((wallet) => (
+                    <div
+                      key={wallet.id}
+                      className={`border rounded-lg p-4 ${!wallet.is_active ? 'opacity-50' : ''}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {getCryptoIcon(wallet.crypto_type)}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{wallet.label}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {wallet.symbol}
+                              </Badge>
+                              {wallet.is_active ? (
+                                <Badge variant="default" className="text-xs bg-green-600">
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  Inactive
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {getCryptoTypeLabel(wallet.crypto_type)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditWalletDialog(wallet)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteWalletDialog(wallet)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded p-3">
+                        <Label className="text-xs text-gray-600">Wallet Address</Label>
+                        <p className="text-xs font-mono text-gray-900 mt-1 break-all">
+                          {wallet.wallet_address}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-gray-400 mt-2">
+                        Updated: {format(new Date(wallet.updated_at), 'MMM dd, yyyy HH:mm')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCryptoWalletsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddWalletDialogOpen} onOpenChange={setIsAddWalletDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Crypto Wallet</DialogTitle>
+            <DialogDescription>
+              Add a new cryptocurrency wallet address for this user
+            </DialogDescription>
+          </DialogHeader>
+
+          {error && (
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Cryptocurrency Type</Label>
+              <Select value={walletForm.crypto_type} onValueChange={handleCryptoTypeChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CRYPTO_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label} ({type.symbol})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Wallet Label (Auto-filled)</Label>
+              <Input
+                value={walletForm.label}
+                onChange={(e) => setWalletForm({ ...walletForm, label: e.target.value })}
+                placeholder="Auto-filled based on crypto type"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Wallet Address</Label>
+              <Input
+                value={walletForm.wallet_address}
+                onChange={(e) => setWalletForm({ ...walletForm, wallet_address: e.target.value })}
+                placeholder="Enter wallet address"
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_active">Active Wallet</Label>
+              <Switch
+                id="is_active"
+                checked={walletForm.is_active}
+                onCheckedChange={(checked) => setWalletForm({ ...walletForm, is_active: checked })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddWalletDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddWallet} disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Add Wallet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditWalletDialogOpen} onOpenChange={setIsEditWalletDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Crypto Wallet</DialogTitle>
+            <DialogDescription>
+              Update the cryptocurrency wallet information
+            </DialogDescription>
+          </DialogHeader>
+
+          {error && (
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Cryptocurrency Type</Label>
+              <Select value={walletForm.crypto_type} onValueChange={handleCryptoTypeChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CRYPTO_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label} ({type.symbol})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Wallet Label (Auto-filled)</Label>
+              <Input
+                value={walletForm.label}
+                onChange={(e) => setWalletForm({ ...walletForm, label: e.target.value })}
+                placeholder="Auto-filled based on crypto type"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Wallet Address</Label>
+              <Input
+                value={walletForm.wallet_address}
+                onChange={(e) => setWalletForm({ ...walletForm, wallet_address: e.target.value })}
+                placeholder="Enter wallet address"
+                className="font-mono text-sm"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="edit_is_active">Active Wallet</Label>
+              <Switch
+                id="edit_is_active"
+                checked={walletForm.is_active}
+                onCheckedChange={(checked) => setWalletForm({ ...walletForm, is_active: checked })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditWalletDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateWallet} disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Update Wallet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={isDeleteWalletDialogOpen}
+        onOpenChange={setIsDeleteWalletDialogOpen}
+        title="Delete Crypto Wallet"
+        description="Are you sure you want to delete this wallet? This action cannot be undone."
+        onConfirm={handleDeleteWallet}
+        confirmText="Delete Wallet"
+        variant="destructive"
+      />
     </Card>
   );
 }
