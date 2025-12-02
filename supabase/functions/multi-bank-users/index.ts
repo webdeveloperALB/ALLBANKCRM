@@ -86,11 +86,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // First, get total counts from all banks
+    // Fetch data and count in a single query per bank (optimized)
     const bankCounts: Record<string, number> = {};
+    const globalOffset = (page - 1) * perPage;
+    let itemsCollected = 0;
+    let currentOffset = 0;
 
+    // First pass: get counts only
     for (const [key, config] of Object.entries(BANKS)) {
       if (bankFilter !== 'all' && key !== bankFilter) {
+        continue;
+      }
+
+      if (shouldApplyHierarchy && key !== userBankKey) {
         continue;
       }
 
@@ -103,14 +111,10 @@ Deno.serve(async (req: Request) => {
 
       let countQuery = client
         .from('users')
-        .select('*', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true });
 
-      if (shouldApplyHierarchy) {
-        if (key === userBankKey && accessibleUserIds.length > 0) {
-          countQuery = countQuery.in('id', accessibleUserIds);
-        } else {
-          continue;
-        }
+      if (shouldApplyHierarchy && accessibleUserIds.length > 0) {
+        countQuery = countQuery.in('id', accessibleUserIds);
       }
 
       if (kycFilter !== 'all') {
@@ -128,11 +132,7 @@ Deno.serve(async (req: Request) => {
     const totalCount = Object.values(bankCounts).reduce((sum, count) => sum + count, 0);
     const totalPages = Math.ceil(totalCount / perPage);
 
-    // Now fetch the actual page of data
-    const globalOffset = (page - 1) * perPage;
-    let itemsCollected = 0;
-    let currentOffset = 0;
-
+    // Second pass: fetch actual data only for needed banks
     for (const [key, config] of Object.entries(BANKS)) {
       if (bankFilter !== 'all' && key !== bankFilter) {
         continue;

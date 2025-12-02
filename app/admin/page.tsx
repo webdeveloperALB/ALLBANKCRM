@@ -94,7 +94,7 @@ export default function AdminPage() {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
       setCurrentPage(1);
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 

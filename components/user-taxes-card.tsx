@@ -65,6 +65,10 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
     }
   };
 
+  const normalizeNumber = (value: string): string => {
+    return value.replace(/,/g, '');
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -74,9 +78,9 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
         body: JSON.stringify({
           bankKey: user.bank_key,
           userId: user.id,
-          taxes: editData.taxes,
-          on_hold: editData.on_hold,
-          paid: editData.paid,
+          taxes: normalizeNumber(editData.taxes),
+          on_hold: normalizeNumber(editData.on_hold),
+          paid: normalizeNumber(editData.paid),
           created_at: editData.created_at ? new Date(editData.created_at).toISOString() : null,
           updated_at: editData.updated_at ? new Date(editData.updated_at).toISOString() : null
         })
@@ -84,6 +88,7 @@ export function UserTaxesCard({ user }: UserTaxesCardProps) {
 
       if (response.ok) {
         await fetchTaxes();
+        toast.success('Taxes updated successfully');
       } else {
         const errorData = await response.json();
         toast.error(`Failed to update taxes: ${errorData.error}`);
