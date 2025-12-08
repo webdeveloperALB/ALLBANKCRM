@@ -171,3 +171,26 @@ export interface BankTransfer {
 export interface TransferWithBankDetails extends Transfer {
   bank_details?: BankTransfer;
 }
+
+export type CryptoType = 'BTC' | 'ETH' | 'USDT';
+export type CryptoNetwork = 'bitcoin' | 'lightning' | 'ethereum' | 'polygon' | 'arbitrum' | 'optimism' | 'tron' | 'bsc' | 'avalanche';
+export type CryptoTransactionStatus = 'Pending' | 'Completed' | 'Failed' | 'Cancelled';
+
+export interface CryptoTransaction {
+  id: string;
+  user_id: string;
+  transaction_type: string;
+  amount: string;
+  currency: string;
+  description: string | null;
+  status: CryptoTransactionStatus;
+  created_at: string;
+  crypto_type: CryptoType | null;
+  price_per_unit: string | null;
+  total_value: string | null;
+  wallet_address: string | null;
+  network: CryptoNetwork | null;
+  transaction_hash: string | null;
+  gas_fee: string | null;
+  admin_notes: string | null;
+}

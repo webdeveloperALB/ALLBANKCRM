@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserWithBank } from '@/lib/types';
+import { UserWithBank, CryptoTransaction, CryptoType, CryptoNetwork, CryptoTransactionStatus } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -32,16 +35,6 @@ interface TransactionHistory {
   thEmail: string;
 }
 
-interface CryptoTransaction {
-  id: string;
-  transaction_type: string;
-  amount: string;
-  crypto_type: string;
-  description: string;
-  status: string;
-  created_at: string;
-}
-
 export function UnifiedBalances({ user }: UnifiedBalancesProps) {
   const [balances, setBalances] = useState<Balances>({
     usd: "0.00",
@@ -62,6 +55,8 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
   const [showAddCrypto, setShowAddCrypto] = useState(false);
   const [editingTxId, setEditingTxId] = useState<number | null>(null);
   const [editTxData, setEditTxData] = useState<Partial<TransactionHistory>>({});
+  const [showEditCryptoDialog, setShowEditCryptoDialog] = useState(false);
+  const [editCryptoData, setEditCryptoData] = useState<Partial<CryptoTransaction>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: number | string | null; type: 'tx' | 'crypto' | null }>({
     open: false,
     id: null,
@@ -134,7 +129,9 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
     try {
       const response = await fetch(`/api/crypto-transactions?bankKey=${user.bank_key}&userId=${user.id}`);
       const data = await response.json();
-      setCryptoTransactions(data || []);
+      if (Array.isArray(data)) {
+        setCryptoTransactions(data);
+      }
     } catch (error) {
       console.error('Error fetching crypto transactions:', error);
     }
@@ -306,25 +303,115 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
     if (!deleteConfirm.id || deleteConfirm.type !== 'crypto') return;
 
     try {
-      const response = await fetch('/api/crypto-transactions/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bankKey: user.bank_key,
-          transactionId: deleteConfirm.id
-        })
+      const bankKey = user.bank_key;
+      const transactionId = deleteConfirm.id;
+
+      console.log('Deleting crypto transaction with params:', { bankKey, transactionId });
+      console.log('User bank_key:', bankKey);
+      console.log('Transaction ID:', transactionId);
+
+      // Use query parameters instead of body for DELETE requests
+      const url = `/api/crypto-transactions/delete?bankKey=${encodeURIComponent(bankKey)}&transactionId=${encodeURIComponent(transactionId)}`;
+      console.log('Request URL:', url);
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
       });
+
+      console.log('Delete response status:', response.status);
+      console.log('Delete response ok:', response.ok);
 
       if (response.ok) {
         toast.success('Transaction deleted');
         setDeleteConfirm({ open: false, id: null, type: null });
         fetchCryptoTransactions();
       } else {
-        toast.error('Failed to delete');
+        let errorMessage = 'Unknown error';
+        try {
+          const text = await response.text();
+          console.log('Response text:', text);
+          if (text) {
+            const result = JSON.parse(text);
+            errorMessage = result.error || 'Unknown error';
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorMessage = `Server error (${response.status})`;
+        }
+        console.error('Delete failed with error:', errorMessage);
+        toast.error('Failed to delete: ' + errorMessage);
       }
     } catch (error) {
+      console.error('Delete exception:', error);
       toast.error('Error deleting');
     }
+  };
+
+  const handleEditCrypto = (tx: CryptoTransaction) => {
+    setEditCryptoData({ ...tx });
+    setShowEditCryptoDialog(true);
+  };
+
+  const handleSaveCryptoEdit = async () => {
+    console.log('handleSaveCryptoEdit called', editCryptoData);
+
+    if (!editCryptoData.id) {
+      console.error('No transaction ID found');
+      toast.error('No transaction ID found');
+      return;
+    }
+
+    try {
+      console.log('Sending update request...');
+      const payload = {
+        bankKey: user.bank_key,
+        transactionId: editCryptoData.id,
+        transaction_type: editCryptoData.transaction_type,
+        amount: editCryptoData.amount,
+        currency: editCryptoData.currency,
+        description: editCryptoData.description,
+        status: editCryptoData.status,
+        crypto_type: editCryptoData.crypto_type,
+        price_per_unit: editCryptoData.price_per_unit,
+        total_value: editCryptoData.total_value,
+        wallet_address: editCryptoData.wallet_address,
+        network: editCryptoData.network,
+        transaction_hash: editCryptoData.transaction_hash,
+        gas_fee: editCryptoData.gas_fee,
+        admin_notes: editCryptoData.admin_notes
+      };
+      console.log('Payload:', payload);
+
+      const response = await fetch('/api/crypto-transactions/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('Response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Update successful:', result);
+        toast.success('Crypto transaction updated');
+        setShowEditCryptoDialog(false);
+        setEditCryptoData({});
+        fetchCryptoTransactions();
+      } else {
+        const result = await response.json();
+        console.error('Update failed:', result);
+        toast.error('Failed to update: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Exception during update:', error);
+      toast.error('Error updating: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const handleCancelCryptoEdit = () => {
+    setShowEditCryptoDialog(false);
+    setEditCryptoData({});
   };
 
   const handleConfirmDelete = () => {
@@ -651,7 +738,7 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
           </div>
 
           {showAddCrypto && (
-            <div className="p-3 mb-3 border rounded-lg bg-purple-50 space-y-2">
+            <div className="p-3 mb-3 border rounded-lg bg-blue-50 space-y-2">
               <div className="grid grid-cols-5 gap-2">
                 <Select value={newCrypto.transaction_type} onValueChange={(v) => setNewCrypto({ ...newCrypto, transaction_type: v })}>
                   <SelectTrigger className="h-8 text-xs">
@@ -695,13 +782,21 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
             {cryptoTransactions.length === 0 ? (
               <div className="text-xs text-gray-500 text-center py-6 bg-gray-50">No crypto transactions</div>
             ) : (
-              <div className="max-h-60 overflow-auto">
+              <div className="max-h-96 overflow-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-gray-100 sticky top-0">
                     <tr>
                       <th className="px-2 py-2 text-left font-semibold text-gray-600">Crypto</th>
                       <th className="px-2 py-2 text-left font-semibold text-gray-600">Type</th>
                       <th className="px-2 py-2 text-left font-semibold text-gray-600">Amount</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Currency</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Status</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Network</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Wallet</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Price/Unit</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Total Value</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">Gas Fee</th>
+                      <th className="px-2 py-2 text-left font-semibold text-gray-600">TX Hash</th>
                       <th className="px-2 py-2 text-left font-semibold text-gray-600">Description</th>
                       <th className="px-2 py-2 text-left font-semibold text-gray-600">Date</th>
                       <th className="px-2 py-2 text-right font-semibold text-gray-600">Actions</th>
@@ -711,20 +806,51 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
                     {cryptoTransactions.map((tx) => (
                       <tr key={tx.id} className="border-b hover:bg-gray-50">
                         <td className="px-2 py-2">
-                          <span className="inline-block px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-bold">
-                            {tx.crypto_type}
+                          <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold">
+                            {tx.crypto_type || '-'}
                           </span>
                         </td>
                         <td className="px-2 py-2">
-                          <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-medium capitalize">
+                          <span className="inline-block px-2 py-0.5 bg-green-100 text-green-700 rounded font-medium capitalize">
                             {tx.transaction_type}
                           </span>
                         </td>
                         <td className="px-2 py-2 font-mono font-bold text-gray-900">{tx.amount}</td>
-                        <td className="px-2 py-2 text-gray-600">{tx.description || '-'}</td>
-                        <td className="px-2 py-2 text-gray-600">{new Date(tx.created_at).toLocaleDateString('en-GB')}</td>
+                        <td className="px-2 py-2 text-gray-600">{tx.currency}</td>
+                        <td className="px-2 py-2">
+                          <span className={`inline-block px-2 py-0.5 rounded font-medium ${
+                            tx.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                            tx.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                            tx.status === 'Failed' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 text-gray-600">{tx.network || '-'}</td>
+                        <td className="px-2 py-2 text-gray-600 font-mono text-xs truncate max-w-[120px]" title={tx.wallet_address || ''}>
+                          {tx.wallet_address ? `${tx.wallet_address.substring(0, 10)}...` : '-'}
+                        </td>
+                        <td className="px-2 py-2 font-mono text-gray-700">{tx.price_per_unit || '-'}</td>
+                        <td className="px-2 py-2 font-mono text-gray-700">{tx.total_value || '-'}</td>
+                        <td className="px-2 py-2 font-mono text-gray-700">{tx.gas_fee || '-'}</td>
+                        <td className="px-2 py-2 text-gray-600 font-mono text-xs truncate max-w-[100px]" title={tx.transaction_hash || ''}>
+                          {tx.transaction_hash ? `${tx.transaction_hash.substring(0, 8)}...` : '-'}
+                        </td>
+                        <td className="px-2 py-2 text-gray-600 max-w-[150px] truncate" title={tx.description || ''}>
+                          {tx.description || '-'}
+                        </td>
+                        <td className="px-2 py-2 text-gray-600 whitespace-nowrap">{new Date(tx.created_at).toLocaleDateString('en-GB')}</td>
                         <td className="px-2 py-2">
                           <div className="flex gap-1 justify-end">
+                            <Button
+                              onClick={() => handleEditCrypto(tx)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
                             <Button
                               onClick={() => setDeleteConfirm({ open: true, id: tx.id, type: 'crypto' })}
                               variant="ghost"
@@ -754,6 +880,210 @@ export function UnifiedBalances({ user }: UnifiedBalancesProps) {
         confirmText="Delete"
         variant="destructive"
       />
+
+      <Dialog open={showEditCryptoDialog} onOpenChange={setShowEditCryptoDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Crypto Transaction</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="crypto_type">Crypto Type *</Label>
+                <Select
+                  value={editCryptoData.crypto_type || ''}
+                  onValueChange={(v) => setEditCryptoData({ ...editCryptoData, crypto_type: v as CryptoType })}
+                >
+                  <SelectTrigger id="crypto_type">
+                    <SelectValue placeholder="Select crypto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BTC">BTC</SelectItem>
+                    <SelectItem value="ETH">ETH</SelectItem>
+                    <SelectItem value="USDT">USDT</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transaction_type">Transaction Type *</Label>
+                <Select
+                  value={editCryptoData.transaction_type || ''}
+                  onValueChange={(v) => setEditCryptoData({ ...editCryptoData, transaction_type: v })}
+                >
+                  <SelectTrigger id="transaction_type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buy">Buy</SelectItem>
+                    <SelectItem value="sell">Sell</SelectItem>
+                    <SelectItem value="transfer">Transfer</SelectItem>
+                    <SelectItem value="deposit">Deposit</SelectItem>
+                    <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount">Amount *</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.00000001"
+                  value={editCryptoData.amount || ''}
+                  onChange={(e) => setEditCryptoData({ ...editCryptoData, amount: e.target.value })}
+                  className="font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency *</Label>
+                <Input
+                  id="currency"
+                  value={editCryptoData.currency || ''}
+                  onChange={(e) => setEditCryptoData({ ...editCryptoData, currency: e.target.value })}
+                  placeholder="USD, EUR, etc."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={editCryptoData.status || 'Pending'}
+                  onValueChange={(v) => setEditCryptoData({ ...editCryptoData, status: v as CryptoTransactionStatus })}
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Failed">Failed</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="network">Network</Label>
+                <Select
+                  value={editCryptoData.network || ''}
+                  onValueChange={(v) => setEditCryptoData({ ...editCryptoData, network: v as CryptoNetwork })}
+                >
+                  <SelectTrigger id="network">
+                    <SelectValue placeholder="Select network" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bitcoin">Bitcoin</SelectItem>
+                    <SelectItem value="lightning">Lightning</SelectItem>
+                    <SelectItem value="ethereum">Ethereum</SelectItem>
+                    <SelectItem value="polygon">Polygon</SelectItem>
+                    <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                    <SelectItem value="optimism">Optimism</SelectItem>
+                    <SelectItem value="tron">Tron</SelectItem>
+                    <SelectItem value="bsc">BSC</SelectItem>
+                    <SelectItem value="avalanche">Avalanche</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="wallet_address">Wallet Address</Label>
+              <Input
+                id="wallet_address"
+                value={editCryptoData.wallet_address || ''}
+                onChange={(e) => setEditCryptoData({ ...editCryptoData, wallet_address: e.target.value })}
+                className="font-mono text-xs"
+                placeholder="0x..."
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price_per_unit">Price per Unit</Label>
+                <Input
+                  id="price_per_unit"
+                  type="number"
+                  step="0.01"
+                  value={editCryptoData.price_per_unit || ''}
+                  onChange={(e) => setEditCryptoData({ ...editCryptoData, price_per_unit: e.target.value })}
+                  className="font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="total_value">Total Value</Label>
+                <Input
+                  id="total_value"
+                  type="number"
+                  step="0.01"
+                  value={editCryptoData.total_value || ''}
+                  onChange={(e) => setEditCryptoData({ ...editCryptoData, total_value: e.target.value })}
+                  className="font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gas_fee">Gas Fee</Label>
+                <Input
+                  id="gas_fee"
+                  type="number"
+                  step="0.00000001"
+                  value={editCryptoData.gas_fee || ''}
+                  onChange={(e) => setEditCryptoData({ ...editCryptoData, gas_fee: e.target.value })}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="transaction_hash">Transaction Hash</Label>
+              <Input
+                id="transaction_hash"
+                value={editCryptoData.transaction_hash || ''}
+                onChange={(e) => setEditCryptoData({ ...editCryptoData, transaction_hash: e.target.value })}
+                className="font-mono text-xs"
+                placeholder="0x..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={editCryptoData.description || ''}
+                onChange={(e) => setEditCryptoData({ ...editCryptoData, description: e.target.value })}
+                rows={2}
+                placeholder="Transaction description..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="admin_notes">Admin Notes</Label>
+              <Textarea
+                id="admin_notes"
+                value={editCryptoData.admin_notes || ''}
+                onChange={(e) => setEditCryptoData({ ...editCryptoData, admin_notes: e.target.value })}
+                rows={2}
+                placeholder="Internal notes (not visible to user)..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleCancelCryptoEdit}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSaveCryptoEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
