@@ -32,6 +32,14 @@ interface UserEditDialogProps {
 
 export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps) {
   const { user: currentUser } = useAuth();
+  const formatDateTimeLocal = (date: string | null | undefined) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - offset * 60 * 1000);
+    return localDate.toISOString().slice(0, 16);
+  };
+
   const [formData, setFormData] = useState({
     email: user.email || '',
     password: '',
@@ -43,7 +51,8 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
     is_admin: user.is_admin || false,
     is_manager: user.is_manager || false,
     is_superiormanager: user.is_superiormanager || false,
-    bank_origin: user.bank_origin
+    bank_origin: user.bank_origin,
+    created_at: formatDateTimeLocal(user.created_at)
   });
   const [saving, setSaving] = useState(false);
 
@@ -68,7 +77,8 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
         is_admin: formData.is_admin,
         is_manager: formData.is_manager,
         is_superiormanager: formData.is_superiormanager,
-        bank_origin: formData.bank_origin
+        bank_origin: formData.bank_origin,
+        created_at: formData.created_at ? new Date(formData.created_at).toISOString() : undefined
       };
 
       const response = await fetch('/api/users/update', {
@@ -192,6 +202,17 @@ export function UserEditDialog({ user, onClose, onSuccess }: UserEditDialogProps
                 value={formData.bank_origin}
                 onChange={(e) => setFormData({ ...formData, bank_origin: e.target.value })}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="created_at">Created At</Label>
+              <Input
+                id="created_at"
+                type="datetime-local"
+                value={formData.created_at}
+                onChange={(e) => setFormData({ ...formData, created_at: e.target.value })}
+              />
+              <p className="text-xs text-gray-500">Set the account creation date and time</p>
             </div>
 
             <div className="grid gap-3">

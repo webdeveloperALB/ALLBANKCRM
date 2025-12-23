@@ -102,6 +102,7 @@ Deno.serve(async (req: Request) => {
     const usersUpdates = { ...otherUpdates };
     if (email) usersUpdates.email = email;
     if (password) usersUpdates.password = password;
+    if (updates.created_at) usersUpdates.created_at = updates.created_at;
 
     const { data, error } = await client
       .from('users')
@@ -130,6 +131,7 @@ Deno.serve(async (req: Request) => {
     if (password) profileUpdates.password = password;
     if (otherUpdates.full_name) profileUpdates.full_name = otherUpdates.full_name;
     if (otherUpdates.age) profileUpdates.age = otherUpdates.age;
+    if (updates.created_at) profileUpdates.created_at = updates.created_at;
 
     if (Object.keys(profileUpdates).length > 0) {
       const { error: profileError } = await client
