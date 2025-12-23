@@ -1,3 +1,0 @@
-```sql
-ALTER TABLE public.leads DISABLE ROW LEVEL SECURITY;
-```
